@@ -850,7 +850,7 @@ function WeekGrid({state,setState,cw,viewGroup,setViewGroup,onGenerate}){
  const teachers=state.teachers;
  const etab=state.etab||DEFAULT_ETAB;
  const [drag,setDrag]=useState(null);
- const [editRes,setEditRes]=useState(null); // {di,si,cell} pour éditer accueil/bilan // {source:"grid"|"bank", di, si, cell} or {source:"bank", idx}
+ const [editRes,setEditRes]=useState(null); // {di,si,cell} accueil/bilan // {source:"grid"|"bank", di, si, cell} or {source:"bank", idx}
  const [dropTarget,setDropTarget]=useState(null); // {di, si}
 
  if(!groups.length)return(
@@ -1352,7 +1352,7 @@ function PlanFormationPanel({state,setState,currentTeacher,cw,setCw,onGenerateWe
      <div>
       <div style={{background:C.card,border:"1px solid "+C.bord,borderRadius:10,padding:"10px 14px",marginBottom:10}}>
        <div style={{fontFamily:FS,fontSize:14,fontWeight:700,color:C.brun}}>{mo.subject}</div>
-       <div style={{fontSize:11,color:C.dim,marginBottom:6}}>{mo.teacherName} — {target}h annuelles</div>
+       <div style={{fontSize:11,color:C.dim,marginBottom:6}}>{mo.teacherName} - {target}h annuelles</div>
        <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"center"}}>
         <div><div style={{fontSize:10,color:C.mut}}>Planifie</div><strong style={{color:C.olive}}>{totP}h</strong></div>
         <div><div style={{fontSize:10,color:C.mut}}>Realise</div><strong style={{color:C.brun}}>{totR}h</strong></div>
@@ -1504,32 +1504,6 @@ function MatrixEditor({state,setState}){
      </tbody>
     </table>
    </div>
-   {/* Modale assignation formateur accueil/bilan */}
-   {editRes&&(
-    <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,.4)",
-    display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}
-    onClick={()=>setEditRes(null)}>
-     <div style={{background:"#fff",borderRadius:12,padding:24,minWidth:280,maxWidth:360}}
-      onClick={e=>e.stopPropagation()}>
-      <div style={{fontFamily:FS,fontSize:15,fontWeight:700,color:C.brun,marginBottom:4}}>
-       {editRes.cell.subject}
-      </div>
-      <div style={{fontSize:12,color:C.mut,marginBottom:16}}>Assigner un formateur (optionnel)</div>
-      <Sel value={editRes.cell.teacherId||""} onChange={e=>{
-       const tid=e.target.value;
-       const newGs=JSON.parse(JSON.stringify(gs));
-       if(!newGs[editRes.di])newGs[editRes.di]={};
-       newGs[editRes.di][editRes.si]=Object.assign({},editRes.cell,{teacherId:tid||null});
-       updateSchedule(newGs);
-       setEditRes(Object.assign({},editRes,{cell:Object.assign({},editRes.cell,{teacherId:tid||null})}));
-      }} style={{width:"100%",marginBottom:12}}>
-       <option value="">-- Aucun --</option>
-       {teachers.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
-      </Sel>
-      <Btn full onClick={()=>setEditRes(null)}>Fermer</Btn>
-     </div>
-    </div>
-   )}
   </div>
  );
 }
@@ -1614,7 +1588,7 @@ function RecapPanel({state,setState}){
       <option key={g.id} value={g.id}>{g.name}</option>
      ))}
     </Sel>
-    <span style={{fontSize:11,color:C.mut}}>{matieres.length} modules — {semaines.length} semaines</span>
+    <span style={{fontSize:11,color:C.mut}}>{matieres.length} modules - {semaines.length} semaines</span>
    </div>
    <div style={{overflowX:"auto",overflowY:"auto",maxHeight:"75vh",border:"1px solid "+C.bord,borderRadius:8}}>
     <table style={{borderCollapse:"collapse",fontFamily:F,fontSize:10}}>
@@ -1632,14 +1606,14 @@ function RecapPanel({state,setState}){
      </thead>
      <tbody>
 
-      {/* ── LIGNE THÈME DE LA SEMAINE ── */}
+      {/* LIGNE THEME DE LA SEMAINE */}
       <tr style={{background:"#fffde7"}}>
        <td style={{...stickyL0,background:"#fffde7",padding:"4px 8px",borderRight:"1px solid "+C.bord,
         fontWeight:700,color:C.ocre,fontSize:11}}>
         Theme de la semaine
        </td>
        <td style={{...stickyL1,background:"#fffde7",padding:"3px",borderRight:"2px solid "+C.bord,textAlign:"center",color:C.mut,fontSize:9}}>
-        —
+        -
        </td>
        {semaines.map(sem=>{
         const wn=sem.week;
@@ -1663,7 +1637,7 @@ function RecapPanel({state,setState}){
          EPI
         </td>
         <td style={{...stickyL1,background:"#f1f8e9",padding:"3px",borderRight:"2px solid "+C.bord,textAlign:"center",color:C.mut,fontSize:9}}>
-         —
+         -
         </td>
         {semaines.map(sem=>{
          const wn=sem.week;
