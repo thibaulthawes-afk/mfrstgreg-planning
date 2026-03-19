@@ -1,0 +1,2040 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Planning MFR v7</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700;800&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.20/babel.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:#f9f6f1;font-family:'Roboto','Segoe UI',sans-serif;}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:#e8e0d0;}
+::-webkit-scrollbar-thumb{background:#ceab5d;border-radius:3px;}
+input,select,button,textarea{font-family:'Roboto','Segoe UI',sans-serif;}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SCRIPT PUR — s'exécute avant Babel, expose tout via window.*
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<script>
+// ── CONSTANTES ────────────────────────────────────────────────────────────────
+var SLOTS_BY_DAY=[
+ [{id:0,label:"9h30-10h30",dur:1.0,period:"morning",isAccueil:true},
+  {id:1,label:"10h45-11h45",dur:1.0,period:"morning"},
+  {id:2,label:"11h45-12h45",dur:1.0,period:"morning"},
+  {id:3,label:"13h45-14h45",dur:1.0,period:"afternoon"},
+  {id:4,label:"14h45-15h45",dur:1.0,period:"afternoon"},
+  {id:5,label:"16h15-17h15",dur:1.0,period:"afternoon"}],
+ [{id:0,label:"8h30-9h30",dur:1.0,period:"morning"},
+  {id:1,label:"9h30-10h30",dur:1.0,period:"morning"},
+  {id:2,label:"10h45-11h45",dur:1.0,period:"morning"},
+  {id:3,label:"11h45-12h45",dur:1.0,period:"morning"},
+  {id:4,label:"13h45-14h45",dur:1.0,period:"afternoon"},
+  {id:5,label:"14h45-15h45",dur:1.0,period:"afternoon"},
+  {id:6,label:"16h15-17h15",dur:1.0,period:"afternoon"}],
+ [{id:0,label:"8h30-9h30",dur:1.0,period:"morning"},
+  {id:1,label:"9h30-10h30",dur:1.0,period:"morning"},
+  {id:2,label:"10h45-11h45",dur:1.0,period:"morning"},
+  {id:3,label:"11h45-12h45",dur:1.0,period:"morning"},
+  {id:4,label:"13h45-14h45",dur:1.0,period:"afternoon"},
+  {id:5,label:"14h45-15h45",dur:1.0,period:"afternoon"},
+  {id:6,label:"16h15-17h15",dur:1.0,period:"afternoon"}],
+ [{id:0,label:"8h30-9h30",dur:1.0,period:"morning"},
+  {id:1,label:"9h30-10h30",dur:1.0,period:"morning"},
+  {id:2,label:"10h45-11h45",dur:1.0,period:"morning"},
+  {id:3,label:"11h45-12h45",dur:1.0,period:"morning"},
+  {id:4,label:"13h45-14h45",dur:1.0,period:"afternoon"},
+  {id:5,label:"14h45-15h45",dur:1.0,period:"afternoon"},
+  {id:6,label:"16h15-17h15",dur:1.0,period:"afternoon"}],
+ [{id:0,label:"8h30-9h30",dur:1.0,period:"morning"},
+  {id:1,label:"9h30-10h30",dur:1.0,period:"morning"},
+  {id:2,label:"10h45-11h45",dur:1.0,period:"morning"},
+  {id:3,label:"11h45-12h45",dur:1.0,period:"morning"},
+  {id:4,label:"13h45-14h45",dur:1.0,period:"afternoon"},
+  {id:5,label:"14h45-15h45",dur:1.0,period:"afternoon",isBilan:true}]
+];
+var SLOTS_1H=[{id:0,label:"8h30-9h30",dur:1.0,period:"morning"},{id:1,label:"9h30-10h30",dur:1.0,period:"morning"},{id:2,label:"10h45-11h45",dur:1.0,period:"morning"},{id:3,label:"11h45-12h45",dur:1.0,period:"morning"},{id:4,label:"13h45-15h00",dur:1.25,period:"afternoon"},{id:5,label:"15h00-16h00",dur:1.0,period:"afternoon"},{id:6,label:"16h15-17h15",dur:1.0,period:"afternoon"}];
+var SLOTS_2H=[{id:0,label:"8h30-9h30",dur:1.0,period:"morning"},{id:1,label:"9h30-10h30",dur:1.0,period:"morning"},{id:2,label:"10h45-12h45",dur:2.0,period:"morning"},{id:3,label:"13h45-15h45",dur:2.0,period:"afternoon"},{id:4,label:"15h00-16h00",dur:1.0,period:"afternoon"},{id:5,label:"16h15-17h15",dur:1.0,period:"afternoon"}];
+var DAYS=["Lundi","Mardi","Mercredi","Jeudi","Vendredi"];
+var EPI_SUBJ="Education pratique interdisciplinaire";
+var ADMIN_PIN="1234";
+var APP_VERSION="7.0.0";
+var LS_KEY="mfr_planning_v7";
+
+var DEFAULT_ETAB={
+ name:"MFR Rennes Saint-Gregoire",
+ regroupements:[
+  {id:"rg1",name:"Capa 1 JP A + MA",groupIds:["g_c1jpa","g_c1ma"],type:"MG"},
+  {id:"rg2",name:"Capa 2 JP + MA",groupIds:["g_c2jp","g_c2ma"],type:"MG"},
+  {id:"rg3",name:"2nde NJPF + PV",groupIds:["g_2njpf","g_2pv"],type:"MG"},
+  {id:"rg4",name:"1ere AP + CPH",groupIds:["g_1ap","g_1cph"],type:"MG"},
+  {id:"rg5",name:"Term AP + CPH",groupIds:["g_tap","g_tcph"],type:"MG"},
+  {id:"rg6",name:"BTS 1 AP + MV",groupIds:["g_bts1ap","g_bts1mv"],type:"MG"},
+  {id:"rg7",name:"BTS 2 AP + MV",groupIds:["g_bts2ap","g_bts2mv"],type:"MG"}
+ ],
+ rules:{maxConsecSameSubject:2,teacherBreakSlots:1,epsMaxPerWeekPerGroup:1,tpMinBlock:2,epsAfternoonOnly:true,noRepeatSubjectSameDay:true},
+ levelSlots:{"4\u00e8me":"1h","3\u00e8me A":"1h","3\u00e8me B":"1h","Capa 1 JP A":"1h","Capa 1 JP B":"1h","Capa 1 MA":"1h","Capa 2 JP":"1h","Capa 2 JP B":"1h","Capa 2 MA":"1h","2nde NJPF":"2h","2nde PV":"2h","1\u00e8re AP":"2h","1\u00e8re CPH":"2h","Term AP":"2h","Term CPH":"2h","BTS 1 AP":"2h","BTS 1 MV":"2h","BTS 2 AP":"2h","BTS 2 MV":"2h","BP 1":"2h","BP 2":"2h","BP FC":"2h"},
+ tpSubjects:["Travaux pratiques","TP Entretien","TP Infrastructure","TP Vegetalisation","NJPF Travaux pratiques","AP Travaux pratiques","JP Travaux pratiques"],
+ epsSubjects:["EPS","Education physique et sportive"],
+ groupWeekCap:35
+};
+
+var DEF_CAL=Array.from({length:44},function(_,i){return{week:i+35<=52?i+35:i+35-52,present:false,date:""};});
+var INIT_GROUPS=[
+ {id:"g_4eme",  name:"4\u00e8me",      size:25,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_3a",    name:"3\u00e8me A",    size:25,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_3b",    name:"3\u00e8me B",    size:25,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_c1jpa", name:"Capa 1 JP A",   size:12,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_c1jpb", name:"Capa 1 JP B",   size:12,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_c1ma",  name:"Capa 1 MA",     size:12,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_c2jp",  name:"Capa 2 JP",     size:12,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_c2jpb", name:"Capa 2 JP B",   size:12,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_c2ma",  name:"Capa 2 MA",     size:12,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_2njpf", name:"2nde NJPF",     size:25,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_2pv",   name:"2nde PV",       size:25,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_1ap",   name:"1\u00e8re AP",  size:20,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_1cph",  name:"1\u00e8re CPH", size:20,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_tap",   name:"Term AP",       size:20,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_tcph",  name:"Term CPH",      size:20,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_bts1ap",name:"BTS 1 AP",      size:15,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_bts1mv",name:"BTS 1 MV",      size:15,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_bts2ap",name:"BTS 2 AP",      size:15,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_bts2mv",name:"BTS 2 MV",      size:15,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_bp1",   name:"BP 1",          size:12,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_bp2",   name:"BP 2",          size:12,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))},
+ {id:"g_bpfc",  name:"BP FC",         size:10,mfrDays:[true,true,true,true,true],calendar:JSON.parse(JSON.stringify(DEF_CAL))}
+];
+
+// ── HELPERS ────────────────────────────────────────────────────────────────────
+function getCurrentWeek(){
+ var d=new Date(2026,2,16),jan4=new Date(d.getFullYear(),0,4);
+ var dow=jan4.getDay()||7,w1=new Date(jan4);
+ w1.setDate(jan4.getDate()-(dow-1));
+ return Math.ceil(((d-w1)/86400000+1)/7);
+}
+function getWeekLabel(wn){
+ var yr=wn<30?2027:2026,jan4=new Date(yr,0,4);
+ var dow=jan4.getDay()||7,w1=new Date(jan4);
+ w1.setDate(jan4.getDate()-(dow-1));
+ var mon=new Date(w1);mon.setDate(w1.getDate()+(wn-1)*7);
+ var fri=new Date(mon);fri.setDate(mon.getDate()+4);
+ function fmt(d){return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0");}
+ return "S"+wn+" "+fmt(mon)+"-"+fmt(fri);
+}
+function getSlotsForGroup(gname,etab,di){
+ if(di!==undefined&&SLOTS_BY_DAY[di])return SLOTS_BY_DAY[di];
+ if(!gname||!etab||!etab.levelSlots)return SLOTS_1H;
+ return etab.levelSlots[gname]==="2h"?SLOTS_2H:SLOTS_1H;
+}
+function isTP(subj,etab){
+ var l=(etab&&etab.tpSubjects)||["Travaux pratiques","TP Entretien","TP Infrastructure","TP Vegetalisation","NJPF Travaux pratiques","AP Travaux pratiques","JP Travaux pratiques"];
+ return l.some(function(x){return subj&&subj.indexOf(x)>=0;});
+}
+function isEPS(subj,etab){
+ var l=(etab&&etab.epsSubjects)||["EPS","Education physique et sportive"];
+ return l.indexOf(subj)>=0;
+}
+function getWeeklyHours(m,group){
+ var pw=(group.calendar||[]).filter(function(w){return w.present;}).length||32;
+ return((m.hoursAnnual||0)-(m.hoursExam||0))/Math.max(1,pw);
+}
+function getGroupement(gid,etab){
+ return((etab&&etab.regroupements)||[]).find(function(rg){return rg.groupIds&&rg.groupIds.indexOf(gid)>=0;})||null;
+}
+function isMGCourse(req,matrix,etab){
+ if(req.courseType==="MG")return true;
+ if(req.courseType==="MP")return false;
+ var rg=getGroupement(req.groupId,etab);
+ if(!rg)return false;
+ return rg.groupIds.filter(function(id){return id!==req.groupId;}).some(function(sid){
+  return matrix.some(function(m){return m.groupId===sid&&m.subject===req.subject&&m.teacherId===req.teacherId&&!m.isMGReceiver;});
+ });
+}
+function migrateState(d){
+ if(!d)d={};
+ var de=DEFAULT_ETAB;
+ if(!d.etab)d.etab=JSON.parse(JSON.stringify(de));
+ if(!d.etab.rules)d.etab.rules=de.rules;
+ if(!d.etab.tpSubjects)d.etab.tpSubjects=de.tpSubjects;
+ if(!d.etab.epsSubjects)d.etab.epsSubjects=de.epsSubjects;
+ if(!d.etab.levelSlots)d.etab.levelSlots=de.levelSlots;
+ if(!d.etab.regroupements)d.etab.regroupements=de.regroupements;
+ if(!d.etab.groupWeekCap)d.etab.groupWeekCap=35;
+ ["matrix","teachers","groups","rooms","emergencyLog"].forEach(function(k){if(!d[k])d[k]=[];});
+ ["constraints","schedules","planFormation","epiPlanning","voyages"].forEach(function(k){if(!d[k])d[k]={};});
+ if(!d.currentWeek)d.currentWeek=getCurrentWeek();
+ d.teachers.forEach(function(t){if(!t.pin)t.pin="0000";if(!t.partialDays)t.partialDays=[];});
+ d.rooms.forEach(function(r){if(!r.blocked)r.blocked=[];});
+ d.matrix.forEach(function(m){if(m.hoursExam===undefined)m.hoursExam=0;});
+ return d;
+}
+function computeRealisees(schedule,weekNum,groups,etab){
+ var result={};
+ if(!schedule)return result;
+ groups.forEach(function(g){
+  var gs=schedule[g.id]||{};
+  var hr={};
+  DAYS.forEach(function(_,di){
+   var daySlots=SLOTS_BY_DAY[di]||SLOTS_1H;
+   daySlots.forEach(function(sl){
+    var cell=gs[di]&&gs[di][sl.id];
+    if(!cell||cell.isReserved)return;
+    var key=cell.subject+"|||"+cell.teacherId;
+    hr[key]=(hr[key]||0)+sl.dur;
+   });
+  });
+  result[g.id]=hr;
+ });
+ return result;
+}
+</script>
+<script>
+
+// ── MOTEUR GÉNÉRATION v7.1 ────────────────────────────────────────────────────
+// Règles :
+// 1. Toutes les heures d'une matière = même jour, créneaux consécutifs
+// 2. Répartition homogène des matières sur les jours
+// 3. Charge formateur homogène sur les jours
+// 4. Génération indépendante par groupe (ne touche pas les autres)
+
+var _cm={},_ci=0;
+var PAL=[{bg:"#162236",b:"#3b82f6",t:"#93c5fd"},{bg:"#0d3322",b:"#22c55e",t:"#86efac"},{bg:"#2d1c0e",b:"#f97316",t:"#fdba74"},{bg:"#1e1535",b:"#a855f7",t:"#d8b4fe"},{bg:"#2c1010",b:"#ef4444",t:"#fca5a5"},{bg:"#0e2a2a",b:"#14b8a6",t:"#99f6e4"},{bg:"#2a2000",b:"#eab308",t:"#fef08a"},{bg:"#250e35",b:"#ec4899",t:"#f9a8d4"},{bg:"#1a2a0a",b:"#84cc16",t:"#d9f99d"},{bg:"#1a0a2a",b:"#8b5cf6",t:"#c4b5fd"}];
+function sc(s){if(!_cm[s])_cm[s]=PAL[_ci++%PAL.length];return _cm[s];}
+function uid(){return Math.random().toString(36).slice(2,9);}
+
+
+// ── MOTEUR v7.2 — Simple, complet, aléatoire ─────────────────────────────────
+function shuffle(arr){
+ var a=arr.slice();
+ for(var i=a.length-1;i>0;i--){
+  var j=Math.floor(Math.random()*(i+1));
+  var tmp=a[i];a[i]=a[j];a[j]=tmp;
+ }
+ return a;
+}
+
+function genSchedule(state, currentWeek, pfHints, targetGroupId){
+ if(!pfHints) pfHints={};
+ var groups=state.groups, teachers=state.teachers, matrix=state.matrix;
+ var etab=state.etab||DEFAULT_ETAB;
+ var conflicts=[];
+
+ // Groupes à générer
+ var activeGroups=groups.filter(function(g){
+  var present=(g.calendar||[]).some(function(w){return w.week===currentWeek&&w.present;});
+  if(!present) return false;
+  if(targetGroupId) return g.id===targetGroupId;
+  return true;
+ });
+
+ // Initialiser grille (copier l'existant pour génération partielle)
+ var sched={};
+ if(targetGroupId && state.schedules && state.schedules[String(currentWeek)]){
+  var ex=state.schedules[String(currentWeek)];
+  Object.keys(ex).forEach(function(gid){
+   if(gid!==targetGroupId) sched[gid]=JSON.parse(JSON.stringify(ex[gid]));
+  });
+ }
+ activeGroups.forEach(function(g){
+  sched[g.id]={};
+  DAYS.forEach(function(_,di){sched[g.id][di]={};});
+ });
+
+ // Accueil / Bilan
+ activeGroups.forEach(function(g){
+  var wk=(g.calendar||[]).find(function(w){return w.week===currentWeek;});
+  if(!(wk&&wk.isSecondConsecutive) && SLOTS_BY_DAY[0][0] && SLOTS_BY_DAY[0][0].isAccueil){
+   sched[g.id][0][0]={subject:"Accueil",isReserved:true,teacherId:null,roomId:null};
+  }
+  if(wk&&wk.isEndOfPeriod){
+   var bilanSl=SLOTS_BY_DAY[4].find(function(s){return s.isBilan;});
+   if(bilanSl) sched[g.id][4][bilanSl.id]={subject:"Bilan",isReserved:true,teacherId:null,roomId:null};
+  }
+ });
+
+ // Traiter chaque groupe indépendamment
+ var gOrder=shuffle(activeGroups.map(function(g){return g.id;}));
+ if(targetGroupId){
+  gOrder=gOrder.filter(function(id){return id!==targetGroupId;});
+  gOrder.unshift(targetGroupId);
+ }
+
+ gOrder.forEach(function(gid){
+  var g=groups.find(function(x){return x.id===gid;});
+  if(!g) return;
+
+  // ── Créneaux disponibles de ce groupe ──────────────────────────────────────
+  var freeSlots=[];
+  DAYS.forEach(function(_,di){
+   var daySlots=SLOTS_BY_DAY[di]||SLOTS_1H;
+   daySlots.forEach(function(sl){
+    // Exclure accueil/bilan seulement s'ils sont réellement réservés dans la grille
+    if(sched[gid][di]&&sched[gid][di][sl.id]) return; // déjà occupé (accueil/bilan ou cours)
+    freeSlots.push({di:di,si:sl.id,dur:sl.dur});
+   });
+  });
+  freeSlots=shuffle(freeSlots); // ordre aléatoire
+
+  var totalFree=freeSlots.reduce(function(s,sl){return s+sl.dur;},0);
+
+  // ── Matières à placer ──────────────────────────────────────────────────────
+  var nb_sem=Math.max(1,(g.calendar||[]).filter(function(w){return w.present;}).length);
+  var matieres=matrix.filter(function(m){
+   return m.groupId===gid&&!m.isMGReceiver&&(m.hoursAnnual||0)>0;
+  });
+
+  // Calculer targets depuis pfHints ou heures annuelles
+  var assignments=[];
+  matieres.forEach(function(m){
+   var key=m.subject+"|||"+m.teacherId;
+   var pfVal=(pfHints[gid]&&pfHints[gid][key])||0;
+   var target=pfVal>0?pfVal:Math.round((((m.hoursAnnual||0)-(m.hoursExam||0))/nb_sem)*2)/2;
+   if(target>=0.5) assignments.push({
+    subject:m.subject,
+    teacherId:m.teacherId,
+    annual:(m.hoursAnnual||0)-(m.hoursExam||0),
+    target:target,
+    courseType:m.courseType||"MP"
+   });
+  });
+  // Trier par heures annuelles décroissantes (priorité aux grosses matières)
+  // + bruit aléatoire pour les matières de même taille
+  assignments.sort(function(a,b){
+   var diff=b.annual-a.annual;
+   if(Math.abs(diff)>5) return diff;
+   return Math.random()-0.5;
+  });
+
+  // ── Combler les créneaux vides avec des heures supplémentaires ─────────────
+  var totalNeeded=assignments.reduce(function(s,a){return s+a.target;},0);
+  var extra=Math.floor(totalFree-totalNeeded);
+  if(extra>0){
+   // Ajouter des heures sur les matières prioritaires (plus d'heures annuelles)
+   var idx=0;
+   for(var e=0;e<extra;e++){
+    assignments[idx%assignments.length].target+=1;
+    idx++;
+   }
+  }
+
+  // ── Construire la liste plate de cours (1 entrée = 1 créneau) ─────────────
+  var toPlace=[];
+  assignments.forEach(function(a){
+   var n=Math.round(a.target);
+   for(var i=0;i<n;i++){
+    toPlace.push({subject:a.subject,teacherId:a.teacherId,courseType:a.courseType});
+   }
+  });
+  toPlace=shuffle(toPlace); // mélanger pour ordre aléatoire
+
+  // ── Placement avec contrainte : pas 2 fois la même matière le même jour ─────
+  // Tracker des matières déjà placées par jour
+  var daySubjects={}; // daySubjects[di] = Set des sujets placés ce jour
+  DAYS.forEach(function(_,di){ daySubjects[di]={}; });
+
+  // Pré-remplir avec ce qui est déjà dans la grille (accueil/bilan)
+  DAYS.forEach(function(_,di){
+   var ds=sched[gid][di]||{};
+   Object.values(ds).forEach(function(cell){
+    if(cell&&cell.subject) daySubjects[di][cell.subject]=true;
+   });
+  });
+
+  var remaining=toPlace.slice(); // copie mutable
+
+  freeSlots.forEach(function(slot){
+   if(!remaining.length) return;
+
+   // Chercher le premier cours pas encore présent ce jour
+   var idx=-1;
+   for(var ri=0;ri<remaining.length;ri++){
+    if(!daySubjects[slot.di][remaining[ri].subject]){
+     idx=ri; break;
+    }
+   }
+
+   // Si tous les cours restants sont déjà ce jour → prendre le premier quand même
+   if(idx<0) idx=0;
+
+   var course=remaining.splice(idx,1)[0];
+   daySubjects[slot.di][course.subject]=true;
+
+   sched[gid][slot.di][slot.si]={
+    subject:course.subject,
+    teacherId:course.teacherId,
+    roomId:"r1",
+    courseType:course.courseType
+   };
+  });
+
+  // S'il reste des créneaux vides (ne devrait pas arriver), remplir avec matières prioritaires
+  freeSlots.forEach(function(slot){
+   if(sched[gid][slot.di]&&sched[gid][slot.di][slot.si]) return;
+   var a=assignments[0];
+   if(!a) return;
+   sched[gid][slot.di][slot.si]={
+    subject:a.subject,teacherId:a.teacherId,roomId:"r1",courseType:a.courseType
+   };
+  });
+ }); // fin gOrder.forEach
+
+ return{schedule:sched,conflicts:conflicts};
+}
+
+async function genScheduleAI(state, currentWeek, pfHints, targetGroupId, onProgress) {
+ if(!pfHints) pfHints={};
+ var groups=state.groups, teachers=state.teachers, matrix=state.matrix;
+ var etab=state.etab||DEFAULT_ETAB;
+
+ // Groupes à planifier
+ var activeGroups=groups.filter(function(g){
+  var present=(g.calendar||[]).some(function(w){return w.week===currentWeek&&w.present;});
+  if(!present) return false;
+  if(targetGroupId) return g.id===targetGroupId;
+  return true;
+ });
+
+ // Construire le contexte pour l'IA (compact)
+ var slots_per_day=[6,7,7,7,6]; // lundi accueil, vendredi bilan
+ var DAYS_NAMES=["Lundi","Mardi","Mercredi","Jeudi","Vendredi"];
+
+ var conflicts_total=[];
+ var final_schedule={};
+
+ // Copier l'existant si génération partielle
+ if(targetGroupId && state.schedules && state.schedules[String(currentWeek)]){
+  var ex=state.schedules[String(currentWeek)];
+  Object.keys(ex).forEach(function(gid){
+   if(gid!==targetGroupId) final_schedule[gid]=JSON.parse(JSON.stringify(ex[gid]));
+  });
+ }
+
+ // Générer d'abord avec le moteur classique (base)
+ var baseResult=genSchedule(state, currentWeek, pfHints, targetGroupId);
+ var baseSched=baseResult.schedule;
+ var conflicts=baseResult.conflicts;
+
+ // Copier le planning de base
+ Object.keys(baseSched).forEach(function(gid){
+  final_schedule[gid]=JSON.parse(JSON.stringify(baseSched[gid]));
+ });
+
+ // Si pas de conflits → retourner directement
+ if(!conflicts || conflicts.length===0){
+  if(onProgress) onProgress("Planning complet genere sans conflits.", 100);
+  return{schedule:final_schedule, conflicts:[]};
+ }
+
+ if(onProgress) onProgress(conflicts.length+" matiere(s) non placee(s). Appel IA pour resolution...", 20);
+
+ // Pour chaque groupe avec conflits, demander à l'IA de résoudre
+ var conflictGroups=[...new Set(conflicts.map(function(c){return c.groupId;}))];
+
+ for(var ci=0;ci<conflictGroups.length;ci++){
+  var gid=conflictGroups[ci];
+  var g=groups.find(function(x){return x.id===gid;});
+  if(!g) continue;
+
+  var gConflicts=conflicts.filter(function(c){return c.groupId===gid;});
+  var gSched=final_schedule[gid]||{};
+
+  // Construire la grille actuelle (ce qui est déjà placé)
+  var placed=[];
+  DAYS_NAMES.forEach(function(_,di){
+   var ds=SLOTS_BY_DAY[di]||SLOTS_1H;
+   ds.forEach(function(sl){
+    var cell=gSched[di]&&gSched[di][sl.id];
+    if(cell&&!cell.isReserved) placed.push({day:DAYS_NAMES[di],slot:sl.label,subject:cell.subject,teacher:cell.teacherId});
+   });
+  });
+
+  // Occupation formateurs (toutes les grilles déjà placées)
+  var teacherBusy={};
+  Object.keys(final_schedule).forEach(function(ogid){
+   var os=final_schedule[ogid];
+   DAYS_NAMES.forEach(function(_,di){
+    var ds=SLOTS_BY_DAY[di]||SLOTS_1H;
+    ds.forEach(function(sl){
+     var cell=os[di]&&os[di][sl.id];
+     if(cell&&!cell.isReserved&&cell.teacherId){
+      var key=cell.teacherId+"_"+di+"_"+sl.id;
+      if(!teacherBusy[key]) teacherBusy[key]=[];
+      teacherBusy[key].push(ogid);
+     }
+    });
+   });
+  });
+
+  // Créneaux libres dans la grille du groupe
+  var freeSlots=[];
+  DAYS_NAMES.forEach(function(_,di){
+   var ds=SLOTS_BY_DAY[di]||SLOTS_1H;
+   ds.forEach(function(sl){
+    if(sl.isAccueil||sl.isBilan) return;
+    if(gSched[di]&&gSched[di][sl.id]) return;
+    freeSlots.push({day:DAYS_NAMES[di],dayIdx:di,slotId:sl.id,label:sl.label});
+   });
+  });
+
+  // Construire le prompt pour l'IA
+  var toPlace=gConflicts.map(function(c){
+   var t=teachers.find(function(x){return x.id===c.teacherId||x.id===c.subject;});
+   // Chercher le teacherId depuis la matrice
+   var mrow=matrix.find(function(m){return m.groupId===gid&&m.subject===c.subject&&!m.isMGReceiver;});
+   var tid=mrow?mrow.teacherId:"?";
+   var tobj=teachers.find(function(x){return x.id===tid;});
+   // Créneaux libres pour ce formateur
+   var tFreeSlots=freeSlots.filter(function(fs){
+    var key=tid+"_"+fs.dayIdx+"_"+fs.slotId;
+    return !teacherBusy[key];
+   });
+   return{
+    subject:c.subject,
+    teacherId:tid,
+    teacherName:tobj?tobj.name:"?",
+    needed:c.needed,
+    placed:c.placed,
+    missing:Math.round((c.needed-c.placed)*10)/10,
+    availableSlots:tFreeSlots.map(function(fs){return fs.day+" "+fs.label;})
+   };
+  });
+
+  var prompt=[
+   "Tu es un expert en planification scolaire MFR.",
+   "Groupe: "+g.name+", Semaine S"+currentWeek,
+   "",
+   "Matieres non placees:",
+   JSON.stringify(toPlace),
+   "",
+   "Creneaux libres: "+freeSlots.map(function(fs){return fs.day+" "+fs.label;}).join(", "),
+   "",
+   "Planning actuel: "+placed.map(function(p){return p.day+" "+p.slot+": "+p.subject;}).join(" | "),
+   "",
+   "Pour chaque matiere manquante, trouve le meilleur creneau libre.",
+   "Si besoin, propose un echange (swap) entre deux cours deja places.",
+   "Distribuer sur plusieurs jours differents.",
+   "",
+   "Reponds UNIQUEMENT en JSON valide sans markdown:",
+   '{"placements":[{"subject":"NomMatiere","dayIdx":0,"slotId":1}],"swaps":[{"day1":0,"slot1":1,"day2":2,"slot2":3}]}'
+  ].join("\n")
+
+  try{
+   if(onProgress) onProgress("IA en train de resoudre "+g.name+"...", 20+ci*60/conflictGroups.length);
+
+   var response=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+     model:"claude-sonnet-4-20250514",
+     max_tokens:2000,
+     messages:[{role:"user",content:prompt}]
+    })
+   });
+
+   var data=await response.json();
+   var text=data.content&&data.content[0]&&data.content[0].text||"{}";
+   var clean=text.replace(/```json|```/g,"").trim();
+   var result=JSON.parse(clean);
+
+   // Appliquer les placements IA
+   var gs=JSON.parse(JSON.stringify(final_schedule[gid]||{}));
+   if(!gs) gs={};
+
+   (result.placements||[]).forEach(function(p){
+    var di=p.dayIdx;
+    if(!gs[di]) gs[di]={};
+    var tid=matrix.find(function(m){return m.groupId===gid&&m.subject===p.subject&&!m.isMGReceiver;});
+    var teachId=tid?tid.teacherId:null;
+    if(teachId){
+     gs[di][p.slotId]={subject:p.subject,teacherId:teachId,roomId:"ai_placed",courseType:"MP"};
+    }
+   });
+
+   // Appliquer les swaps IA
+   (result.swaps||[]).forEach(function(sw){
+    var d1=sw.day1!==undefined?sw.day1:DAYS_NAMES.indexOf(sw.day1);
+    var d2=sw.day2!==undefined?sw.day2:DAYS_NAMES.indexOf(sw.day2);
+    // Trouver les dayIdx depuis le nom du jour
+    d1=DAYS_NAMES.indexOf(sw.day1||"");
+    d2=DAYS_NAMES.indexOf(sw.day2||"");
+    if(d1<0||d2<0) return;
+    if(!gs[d1]||!gs[d2]) return;
+    var tmp=gs[d1][sw.slot1];
+    gs[d1][sw.slot1]=gs[d2][sw.slot2]||null;
+    gs[d2][sw.slot2]=tmp||null;
+    if(!gs[d1][sw.slot1]) delete gs[d1][sw.slot1];
+    if(!gs[d2][sw.slot2]) delete gs[d2][sw.slot2];
+   });
+
+   final_schedule[gid]=gs;
+
+  } catch(e){
+   console.error("Erreur IA pour "+g.name+":", e);
+   conflicts_total=conflicts_total.concat(gConflicts);
+  }
+ }
+
+ if(onProgress) onProgress("Planning finalise.", 100);
+ return{schedule:final_schedule, conflicts:conflicts_total};
+}
+window.genScheduleAI=genScheduleAI;
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SCRIPT BABEL (JSX) — importe tout depuis window.*
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<script type="text/babel">
+// Imports depuis window
+var genSchedule=window.genSchedule;
+var computeRealisees=window.computeRealisees;
+var migrateState=window.migrateState;
+var getCurrentWeek=window.getCurrentWeek;
+var getWeekLabel=window.getWeekLabel;
+var getSlotsForGroup=window.getSlotsForGroup;
+var isTP=window.isTP;
+var isEPS=window.isEPS;
+var getGroupement=window.getGroupement;
+var isMGCourse=window.isMGCourse;
+var sc=window.sc;
+var uid=window.uid;
+var DEFAULT_ETAB=window.DEFAULT_ETAB;
+var INIT_GROUPS=window.INIT_GROUPS;
+var DEF_CAL=window.DEF_CAL;
+var SLOTS_BY_DAY=window.SLOTS_BY_DAY;
+var SLOTS_1H=window.SLOTS_1H;
+var SLOTS_2H=window.SLOTS_2H;
+var DAYS=window.DAYS;
+var EPI_SUBJ=window.EPI_SUBJ;
+var ADMIN_PIN=window.ADMIN_PIN;
+var APP_VERSION=window.APP_VERSION;
+var LS_KEY=window.LS_KEY;
+
+const {useState,useRef,useEffect,useCallback}=React;
+
+// ── COULEURS & TYPO ───────────────────────────────────────────────────────────
+const C={
+ bg:"#f9f6f1",surf:"#ffffff",card:"#fdf9f3",bord:"#e0d5c5",
+ olive:"#909b25",accD:"#e8edcc",
+ brun:"#92542a",brunD:"#f5e6d8",
+ ocre:"#ceab5d",yelD:"#faf3e0",
+ red:"#78151e",redD:"#f5dde0",
+ creme:"#dfd7cd",
+ txt:"#2a1f0e",mut:"#8a7560",dim:"#6b5a45",
+};
+C.acc=C.olive;C.grn=C.olive;C.grnD=C.accD;C.org=C.brun;C.orgD=C.brunD;
+const F="Roboto,sans-serif";
+const FS="'Roboto Slab',Georgia,serif";
+
+const DEF={
+ version:APP_VERSION,
+ teachers:[],
+ groups:INIT_GROUPS,
+ rooms:[{id:"r1",name:"Salle 101",capacity:30,blocked:[]},{id:"r2",name:"Salle 102",capacity:25,blocked:[]},{id:"r3",name:"Salle 103",capacity:25,blocked:[]},{id:"r4",name:"Grande salle",capacity:60,blocked:[]},{id:"r5",name:"Salle Info",capacity:20,blocked:[]},{id:"r6",name:"Atelier",capacity:15,blocked:[]},{id:"r7",name:"Salle 07",capacity:30,blocked:[]},{id:"r8",name:"Salle 08",capacity:30,blocked:[]},{id:"r9",name:"Salle 09",capacity:30,blocked:[]},{id:"r10",name:"Salle 10",capacity:30,blocked:[]}],
+ matrix:[],
+ mfrWeeks:32,
+ currentWeek:getCurrentWeek(),
+ constraints:{},
+ schedule:null,
+ emergencyLog:[],
+ schedules:{},
+ lockedWeeks:{},
+ bank:[],
+ planFormation:{},
+ epiPlanning:{},
+ voyages:{},
+ etab:DEFAULT_ETAB,
+};
+
+function loadFromLS(){
+ try{
+  var raw=localStorage.getItem(LS_KEY);
+  if(raw){var d=JSON.parse(raw);return migrateState(d);}
+ }catch(e){}
+ return JSON.parse(JSON.stringify(DEF));
+}
+
+// ── COMPOSANTS UI ─────────────────────────────────────────────────────────────
+function Btn({children,onClick,v="primary",sm=false,full=false,disabled=false,style={}}){
+ const vs={
+  primary:{background:C.olive,color:"#fff",border:"none"},
+  success:{background:C.olive,color:"#fff",border:"none"},
+  danger:{background:C.red,color:"#fff",border:"none"},
+  ghost:{background:"transparent",color:C.dim,border:"1px solid "+C.bord},
+  orange:{background:C.brun,color:"#fff",border:"none"},
+  outline:{background:"transparent",color:C.olive,border:"1px solid "+C.olive},
+ };
+ const s=vs[v]||vs.primary;
+ return(
+  <button onClick={onClick} disabled={disabled}
+   style={{...s,borderRadius:8,padding:sm?"4px 10px":"7px 16px",fontSize:sm?11:13,
+   fontFamily:F,fontWeight:600,cursor:disabled?"not-allowed":"pointer",
+   opacity:disabled?0.5:1,width:full?"100%":"auto",...style}}>
+   {children}
+  </button>
+ );
+}
+function Inp({value,onChange,placeholder="",type="text",style={}}){
+ return <input type={type} value={value} onChange={onChange} placeholder={placeholder}
+  style={{border:"1px solid "+C.bord,borderRadius:7,padding:"6px 10px",fontFamily:F,
+  fontSize:12,background:"#fff",color:C.txt,width:"100%",...style}}/>;
+}
+function Sel({value,onChange,children,style={}}){
+ return <select value={value} onChange={onChange}
+  style={{border:"1px solid "+C.bord,borderRadius:7,padding:"6px 10px",fontFamily:F,
+  fontSize:12,background:"#fff",color:C.txt,...style}}>{children}</select>;
+}
+function Card({children,style={}}){
+ return <div style={{background:C.card,border:"1px solid "+C.bord,borderRadius:12,padding:16,...style}}>{children}</div>;
+}
+function ST({children,sub=""}){
+ return <div style={{marginBottom:12}}>
+  <div style={{fontFamily:FS,fontSize:16,fontWeight:700,color:C.brun}}>{children}</div>
+  {sub&&<div style={{fontSize:11,color:C.mut,marginTop:2}}>{sub}</div>}
+ </div>;
+}
+
+// ── PINSCREEN ─────────────────────────────────────────────────────────────────
+function PinScreen({title,subtitle,icon,validPin,onSuccess,onBack}){
+ const [pin,setPin]=useState(["","","",""]);
+ const [err,setErr]=useState(false);
+ const refs=[useRef(),useRef(),useRef(),useRef()];
+ function handleKey(i,v){
+  if(!/^\d?$/.test(v))return;
+  const np=[...pin];np[i]=v;setPin(np);
+  if(v&&i<3&&refs[i+1].current)refs[i+1].current.focus();
+  if(np.every(x=>x)){
+   if(np.join("")===validPin){onSuccess();}
+   else{setErr(true);setTimeout(()=>{setPin(["","","",""]);setErr(false);if(refs[0].current)refs[0].current.focus();},600);}
+  }
+ }
+ return(
+  <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:F}}>
+   <div style={{maxWidth:320,width:"100%",textAlign:"center",padding:24}}>
+    <div style={{fontSize:40,marginBottom:8}}>{icon}</div>
+    <div style={{fontFamily:FS,fontSize:18,fontWeight:700,color:C.brun,marginBottom:4}}>{title}</div>
+    <div style={{fontSize:12,color:C.mut,marginBottom:24}}>{subtitle}</div>
+    <div style={{display:"flex",gap:10,justifyContent:"center",marginBottom:16}}>
+     {pin.map((v,i)=>(
+      <input key={i} ref={refs[i]} type="password" maxLength={1} value={v}
+       onChange={e=>handleKey(i,e.target.value)}
+       style={{width:48,height:52,textAlign:"center",fontSize:20,fontWeight:700,
+       border:"2px solid "+(err?C.red:C.bord),borderRadius:10,
+       background:err?"#fff0f0":"#fff",fontFamily:F}}/>
+     ))}
+    </div>
+    {err&&<div style={{color:C.red,fontSize:12,marginBottom:8}}>Code incorrect</div>}
+    <button onClick={onBack} style={{background:"none",border:"none",color:C.mut,cursor:"pointer",fontSize:12,fontFamily:F}}>
+      Retour
+    </button>
+   </div>
+  </div>
+ );
+}
+
+// ── LOGINSCREEN ───────────────────────────────────────────────────────────────
+function LoginScreen({state,onAdmin,onTeacher}){
+ const [mode,setMode]=useState(null);
+ const [selT,setSelT]=useState((state.teachers[0]&&state.teachers[0].id)||"");
+ if(mode==="admin")return <PinScreen title="Espace Directeur" subtitle="Acces reserve a la direction" icon="🏫" validPin={ADMIN_PIN} onSuccess={onAdmin} onBack={()=>setMode(null)}/>;
+ if(mode==="teacher"){
+  const t=state.teachers.find(x=>x.id===selT);
+  if(t)return <PinScreen title={"Bonjour "+t.name.split(" ")[0]} subtitle="Votre code personnel" icon="👋" validPin={t.pin||"0000"} onSuccess={()=>onTeacher(t)} onBack={()=>setMode(null)}/>;
+ }
+ return(
+  <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:F}}>
+   <div style={{maxWidth:400,width:"100%",padding:24,textAlign:"center"}}>
+    <div style={{width:56,height:56,background:C.olive,borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",fontSize:26}}>🗓</div>
+    <div style={{fontFamily:FS,fontSize:22,fontWeight:800,color:C.txt,marginBottom:4}}>Planning MFR</div>
+    <div style={{fontSize:12,color:C.mut,marginBottom:4}}>Rennes Saint-Gregoire</div>
+    <div style={{fontSize:11,color:C.mut,opacity:.5,marginBottom:30}}>v{APP_VERSION}</div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
+     {[{id:"admin",icon:"🏫",title:"Directeur",sub:"Gestion & generation"},{id:"teacher",icon:"📋",title:"Formateur",sub:"Planning & imperatifs"}].map(p=>(
+      <button key={p.id} onClick={()=>setMode(p.id)}
+       style={{background:C.card,border:"2px solid "+C.bord,borderRadius:12,padding:"20px 12px",cursor:"pointer",fontFamily:F,textAlign:"center"}}>
+       <div style={{fontSize:28,marginBottom:6}}>{p.icon}</div>
+       <div style={{color:C.txt,fontWeight:700,fontSize:13}}>{p.title}</div>
+       <div style={{color:C.mut,fontSize:11,marginTop:2}}>{p.sub}</div>
+      </button>
+     ))}
+    </div>
+    {mode==="teacher"&&(
+     <div style={{marginTop:8}}>
+      <Sel value={selT} onChange={e=>setSelT(e.target.value)} style={{width:"100%",marginBottom:10}}>
+       {state.teachers.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+      </Sel>
+      {selT&&<Btn full onClick={()=>setMode("teacher")}>Valider</Btn>}
+     </div>
+    )}
+   </div>
+  </div>
+ );
+}
+
+// ── WEEKCALENDAR ──────────────────────────────────────────────────────────────
+function WeekCalendar({groups,selectedGroup,selectedWeek,onSelectWeek,schedules,planFormation,lockedWeeks}){
+ const group=groups.find(g=>g.id===selectedGroup);
+ const cal=(group&&group.calendar||[])
+  .filter(w=>w.present)
+  .sort((a,b)=>(a.week<30?a.week+52:a.week)-(b.week<30?b.week+52:b.week));
+ const months=[
+  {label:"Sep",weeks:[35,36,37,38]},{label:"Oct",weeks:[39,40,41,42,43]},
+  {label:"Nov",weeks:[44,45,46,47]},{label:"Dec",weeks:[48,49,50,51,52]},
+  {label:"Jan",weeks:[1,2,3,4,5]},{label:"Fev",weeks:[6,7,8,9]},
+  {label:"Mar",weeks:[10,11,12,13]},{label:"Avr",weeks:[14,15,16,17]},
+  {label:"Mai",weeks:[18,19,20,21,22]},{label:"Jun",weeks:[23,24,25,26]},
+ ];
+ const presentW=new Set(cal.map(w=>w.week));
+ const schedW=new Set(Object.keys(schedules||{}).map(Number));
+ const pfG=(planFormation||{})[selectedGroup];
+ const pfW=new Set(Object.keys((pfG&&pfG.semaines)||{}).filter(wn=>{
+  const h=(pfG.semaines[wn]&&pfG.semaines[wn].heures)||{};
+  return Object.keys(h).length>0;
+ }).map(Number));
+ return(
+  <div style={{background:C.card,border:"1px solid "+C.bord,borderRadius:10,padding:"8px 12px",marginBottom:10}}>
+   <div style={{fontSize:10,fontWeight:700,color:C.mut,textTransform:"uppercase",marginBottom:6,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+    <span>Navigation rapide</span>
+    <span style={{display:"flex",gap:6,alignItems:"center",fontWeight:400}}>
+     <span style={{width:10,height:10,borderRadius:2,background:C.olive,display:"inline-block"}}></span>Plan saisi
+     <span style={{width:10,height:10,borderRadius:2,background:C.brun,display:"inline-block",marginLeft:4}}></span>Planning
+     <span style={{width:10,height:10,borderRadius:2,background:C.creme,border:"1px solid "+C.bord,display:"inline-block",marginLeft:4}}></span>Presence
+    </span>
+   </div>
+   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+    {months.map(m=>{
+     const mw=m.weeks.filter(w=>presentW.has(w));
+     if(!mw.length)return null;
+     return(
+      <div key={m.label}>
+       <div style={{fontSize:9,fontWeight:700,color:C.mut,textTransform:"uppercase",marginBottom:2,textAlign:"center"}}>{m.label}</div>
+       <div style={{display:"flex",flexWrap:"wrap",gap:2,justifyContent:"center"}}>
+        {mw.map(wn=>{
+         const isSel=selectedWeek===wn;
+         const hasPlan=pfW.has(wn);
+         const hasSched=schedW.has(wn);
+         const bg=isSel?C.brun:hasPlan?C.accD:hasSched?"#e8e0cc":C.creme;
+         const color=isSel?"#fff":hasPlan?C.olive:hasSched?C.brun:C.dim;
+         const border=isSel?"2px solid "+C.brun:hasPlan?"1px solid "+C.olive:"1px solid "+C.bord;
+         return(
+          <button key={wn} onClick={()=>onSelectWeek(wn)}
+           title={"S"+wn+(hasSched?" Planning":" ")+(hasPlan?" Plan":"")+(lockedWeeks&&lockedWeeks[wn]?" VERROUILLE":"")}
+           style={{width:24,height:20,borderRadius:3,border,background:lockedWeeks&&lockedWeeks[wn]?"#c8e6c9":bg,color,fontFamily:F,
+           fontSize:9,fontWeight:isSel||hasPlan?700:400,cursor:"pointer",padding:0,
+           boxShadow:lockedWeeks&&lockedWeeks[wn]?"inset 0 0 0 1px #4caf50":"none"}}>
+           {lockedWeeks&&lockedWeeks[wn]?"v":wn}
+          </button>
+         );
+        })}
+       </div>
+      </div>
+     );
+    })}
+   </div>
+  </div>
+ );
+}
+
+// ── WEEKGRID ──────────────────────────────────────────────────────────────────
+function WeekGrid({state,setState,cw,viewGroup,setViewGroup,onGenerate}){
+ const groups=state.groups.filter(g=>(g.calendar||[]).some(w=>w.week===cw&&w.present));
+ const schedule=state.schedules&&(state.schedules[cw]||state.schedules[String(cw)]);
+ const isLocked=state.lockedWeeks&&(state.lockedWeeks[cw]||state.lockedWeeks[String(cw)]);
+ const teachers=state.teachers;
+ const etab=state.etab||DEFAULT_ETAB;
+ const [drag,setDrag]=useState(null);
+ const [editRes,setEditRes]=useState(null); // {di,si,cell} pour éditer accueil/bilan // {source:"grid"|"bank", di, si, cell} or {source:"bank", idx}
+ const [dropTarget,setDropTarget]=useState(null); // {di, si}
+
+ if(!groups.length)return(
+  <div style={{textAlign:"center",padding:40,color:C.mut}}>
+   <div style={{fontSize:36,marginBottom:8}}>{"📅"}</div>
+   <div>Aucun groupe present en S{cw}</div>
+  </div>
+ );
+
+ const group=groups.find(g=>g.id===viewGroup)||groups[0];
+ if(!group)return null;
+ const gs=(schedule&&schedule[group.id])||{};
+ const bank=state.bank||[];
+
+ function cellColor(cell){
+  if(!cell)return{bg:"#f0ede8",color:C.mut,label:"",teacher:null};
+  if(cell.isReserved){
+   const t2=cell.teacherId&&teachers.find(x=>x.id===cell.teacherId);
+   return{
+    bg:cell.subject==="Accueil"?"#e8f0fe":"#fff8e1",
+    color:cell.subject==="Accueil"?"#1565c0":"#e65100",
+    label:cell.subject,
+    teacher:t2?t2.name.split(" ")[0]:null
+   };
+  }
+  const col=sc(cell.subject);
+  return{bg:col.bg,color:col.t,label:cell.subject,teacher:null};
+ }
+
+ function updateSchedule(newGs){
+  setState(p=>{
+   const sc2=Object.assign({},p.schedules||{});
+   const wk=Object.assign({},sc2[String(cw)]||sc2[cw]||{});
+   wk[group.id]=newGs;
+   sc2[String(cw)]=wk;
+   return Object.assign({},p,{schedules:sc2});
+  });
+ }
+
+ function handleDragStart(e,di,si,cell){
+  if(isLocked)return;
+  e.dataTransfer.effectAllowed="move";
+  setDrag({source:"grid",di,si,cell});
+ }
+
+ function handleBankDragStart(e,idx,cell){
+  if(isLocked)return;
+  e.dataTransfer.effectAllowed="move";
+  setDrag({source:"bank",idx,cell});
+ }
+
+ function handleDragOver(e,di,si){
+  e.preventDefault();
+  e.dataTransfer.dropEffect="move";
+  setDropTarget({di,si});
+ }
+
+ function handleDrop(e,di,si){
+  e.preventDefault();
+  setDropTarget(null);
+  if(!drag)return;
+  if(isLocked){alert("Planning verrouille.");return;}
+
+  const targetCell=gs[di]&&gs[di][si];
+  const newGs=JSON.parse(JSON.stringify(gs));
+  if(!newGs[di])newGs[di]={};
+
+  if(drag.source==="grid"){
+   const srcCell=drag.cell;
+   const srcDi=drag.di, srcSi=drag.si;
+   if(srcDi===di&&srcSi===si){setDrag(null);return;}
+
+   if(targetCell&&!targetCell.isReserved){
+    // Swap : la cellule cible va dans la banque, la source vient ici
+    newGs[di][si]=Object.assign({},srcCell);
+    // Mettre la cellule source dans la banque
+    newGs[srcDi]=newGs[srcDi]||{};
+    delete newGs[srcDi][srcSi];
+    setState(p=>{
+     const bk=[...((p.bank)||[]),{cell:targetCell,groupId:group.id,cw:String(cw)}];
+     return Object.assign({},p,{bank:bk});
+    });
+   } else {
+    // Déplacer vers case vide
+    newGs[di][si]=Object.assign({},srcCell);
+    newGs[srcDi]=newGs[srcDi]||{};
+    delete newGs[srcDi][srcSi];
+   }
+  } else {
+   // Depuis la banque
+   const srcCell=drag.cell;
+   const srcIdx=drag.idx;
+   if(targetCell&&!targetCell.isReserved){
+    // Swap avec banque
+    newGs[di][si]=Object.assign({},srcCell);
+    setState(p=>{
+     const bk=[...((p.bank)||[])];
+     bk[srcIdx]={cell:targetCell,groupId:group.id,cw:String(cw)};
+     return Object.assign({},p,{bank:bk});
+    });
+   } else {
+    newGs[di][si]=Object.assign({},srcCell);
+    setState(p=>{
+     const bk=[...((p.bank)||[])];
+     bk.splice(srcIdx,1);
+     return Object.assign({},p,{bank:bk});
+    });
+   }
+  }
+  updateSchedule(newGs);
+  setDrag(null);
+ }
+
+ function handleDropOnBank(e){
+  e.preventDefault();
+  setDropTarget(null);
+  if(!drag||drag.source!=="grid")return;
+  if(isLocked){alert("Planning verrouille.");return;}
+  const newGs=JSON.parse(JSON.stringify(gs));
+  newGs[drag.di]=newGs[drag.di]||{};
+  delete newGs[drag.di][drag.si];
+  updateSchedule(newGs);
+  setState(p=>{
+   const bk=[...((p.bank)||[]),{cell:drag.cell,groupId:group.id,cw:String(cw)}];
+   return Object.assign({},p,{bank:bk});
+  });
+  setDrag(null);
+ }
+
+ function removeBankItem(idx){
+  setState(p=>{
+   const bk=[...((p.bank)||[])];
+   bk.splice(idx,1);
+   return Object.assign({},p,{bank:bk});
+  });
+ }
+
+ // Filtrer banque : seulement items du groupe+semaine courants
+ const bankItems=bank.filter(b=>b.groupId===group.id&&String(b.cw)===String(cw));
+
+ if(!schedule)return(
+  <div style={{textAlign:"center",padding:40,color:C.mut}}>
+   <div style={{fontSize:36,marginBottom:8}}>{"📅"}</div>
+   <div style={{marginBottom:16}}>Planning non genere pour S{cw}</div>
+   <Btn v="success" onClick={onGenerate}>Generer S{cw}</Btn>
+  </div>
+ );
+
+ return(
+  <div style={{display:"flex",gap:12}}>
+   {/* Banque de cours */}
+   <div
+    onDragOver={e=>{e.preventDefault();}}
+    onDrop={handleDropOnBank}
+    style={{minWidth:130,maxWidth:150,background:C.card,border:"2px dashed "+C.bord,
+    borderRadius:10,padding:8,flexShrink:0}}>
+    <div style={{fontSize:10,fontWeight:700,color:C.mut,textTransform:"uppercase",marginBottom:8,textAlign:"center"}}>
+     Banque
+    </div>
+    {bankItems.length===0&&(
+     <div style={{fontSize:10,color:C.mut,textAlign:"center",padding:"8px 0",opacity:.6}}>
+      Glisser un cours ici pour le retirer
+     </div>
+    )}
+    {bankItems.map((b,idx)=>{
+     const realIdx=bank.indexOf(b);
+     const col=sc(b.cell.subject);
+     const t=teachers.find(x=>x.id===b.cell.teacherId);
+     return(
+      <div key={idx}
+       draggable={!isLocked}
+       onDragStart={e=>handleBankDragStart(e,realIdx,b.cell)}
+       style={{background:col.bg,color:col.t,borderRadius:6,padding:"5px 7px",
+       marginBottom:5,cursor:isLocked?"default":"grab",fontSize:10,lineHeight:1.3,
+       border:"1px solid "+col.b}}>
+       <div style={{fontWeight:700}}>{b.cell.subject.length>14?b.cell.subject.slice(0,13)+"...":b.cell.subject}</div>
+       {t&&<div style={{opacity:.8}}>{t.name.split(" ")[0]}</div>}
+       <button onClick={()=>removeBankItem(realIdx)}
+        style={{background:"none",border:"none",color:col.t,cursor:"pointer",fontSize:9,opacity:.7,padding:"1px 0",display:"block"}}>
+        supprimer
+       </button>
+      </div>
+     );
+    })}
+   </div>
+   {/* Grille */}
+   <div style={{flex:1,overflowX:"auto"}}>
+    <div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap",alignItems:"center"}}>
+     <Sel value={group.id} onChange={e=>setViewGroup(e.target.value)} style={{minWidth:120}}>
+      {groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}
+     </Sel>
+     <Btn v="ghost" sm onClick={onGenerate}>Regenerer S{cw}</Btn>
+     {isLocked&&<span style={{fontSize:11,color:C.olive,fontWeight:700}}>{"🔒 Verrouille"}</span>}
+     {!isLocked&&<span style={{fontSize:10,color:C.mut}}>Glisser-deposer pour ajuster</span>}
+    </div>
+    <table style={{borderCollapse:"collapse",width:"100%",fontFamily:F,fontSize:11}}>
+     <thead>
+      <tr>
+       <th style={{background:C.brun,color:"#fff",padding:"5px 8px",fontSize:10,width:90}}>Creneau</th>
+       {DAYS.map(d=>(
+        <th key={d} style={{background:C.brun,color:"#fff",padding:"5px 8px",fontSize:10,minWidth:100,textAlign:"center"}}>{d}</th>
+       ))}
+      </tr>
+     </thead>
+     <tbody>
+      {SLOTS_BY_DAY[0].map((sl0,si)=>{
+       const hasAny=DAYS.some((_,di)=>SLOTS_BY_DAY[di]&&si<SLOTS_BY_DAY[di].length);
+       if(!hasAny)return null;
+       return(
+        <tr key={si} style={{background:si%2===0?"#fff":C.creme}}>
+         <td style={{padding:"5px 8px",color:C.mut,fontSize:10,fontWeight:600,borderRight:"1px solid "+C.bord}}>
+          {SLOTS_BY_DAY[0][si]&&SLOTS_BY_DAY[0][si].label}
+         </td>
+         {DAYS.map((_,di)=>{
+          const slotsDi=SLOTS_BY_DAY[di];
+          if(!slotsDi||si>=slotsDi.length)return(
+           <td key={di} style={{padding:4,borderRight:"1px solid "+C.bord,background:"#f5f3f0"}}></td>
+          );
+          const slDi=slotsDi[si];
+          const cell=gs[di]&&gs[di][slDi.id];
+          const {bg,color,label}=cellColor(cell);
+          const t=cell&&!cell.isReserved&&teachers.find(x=>x.id===cell.teacherId);
+          const isDrop=dropTarget&&dropTarget.di===di&&dropTarget.si===slDi.id;
+          const isDragging=drag&&drag.source==="grid"&&drag.di===di&&drag.si===slDi.id;
+          return(
+           <td key={di}
+            draggable={!isLocked&&!!(cell&&!cell.isReserved)}
+            onDragStart={e=>cell&&!cell.isReserved&&handleDragStart(e,di,slDi.id,cell)}
+            onDragOver={e=>handleDragOver(e,di,slDi.id)}
+            onDragLeave={()=>setDropTarget(null)}
+            onDrop={e=>handleDrop(e,di,slDi.id)}
+            style={{padding:4,borderRight:"1px solid "+C.bord,
+            background:isDrop?"#d4edda":isDragging?"#f5f5f5":bg,
+            verticalAlign:"top",
+            cursor:!isLocked&&cell&&!cell.isReserved?"grab":cell&&cell.isReserved?"pointer":"default",
+            outline:isDrop?"2px solid "+C.olive:"none",
+            opacity:isDragging?0.4:1,transition:"background .1s"}}
+            onClick={()=>cell&&cell.isReserved&&setEditRes({di,si:slDi.id,cell})}>
+            {cell&&!isDragging&&(
+             <div style={{color:cellColor(cell).color,fontSize:10,lineHeight:1.3,pointerEvents:"none"}}>
+              <div style={{fontWeight:700}}>{(cellColor(cell).label||"").length>18?(cellColor(cell).label||"").slice(0,17)+"...":(cellColor(cell).label||"")}</div>
+              {(cellColor(cell).teacher||(t&&t.name))&&<div style={{opacity:0.8}}>{cellColor(cell).teacher||(t&&t.name.split(" ")[0])}</div>}
+              {cell.isReserved&&!cell.teacherId&&<div style={{opacity:.5,fontSize:9,fontStyle:"italic"}}>cliquer</div>}
+             </div>
+            )}
+           </td>
+          );
+         })}
+        </tr>
+       );
+      })}
+     </tbody>
+    </table>
+   </div>
+   {/* Modale assignation formateur accueil/bilan */}
+   {editRes&&(
+    <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,.4)",
+    display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}
+    onClick={()=>setEditRes(null)}>
+     <div style={{background:"#fff",borderRadius:12,padding:24,minWidth:280,maxWidth:360}}
+      onClick={e=>e.stopPropagation()}>
+      <div style={{fontFamily:FS,fontSize:15,fontWeight:700,color:C.brun,marginBottom:4}}>
+       {editRes.cell.subject}
+      </div>
+      <div style={{fontSize:12,color:C.mut,marginBottom:16}}>Assigner un formateur (optionnel)</div>
+      <Sel value={editRes.cell.teacherId||""} onChange={e=>{
+       const tid=e.target.value;
+       const newGs=JSON.parse(JSON.stringify(gs));
+       if(!newGs[editRes.di])newGs[editRes.di]={};
+       newGs[editRes.di][editRes.si]=Object.assign({},editRes.cell,{teacherId:tid||null});
+       updateSchedule(newGs);
+       setEditRes(Object.assign({},editRes,{cell:Object.assign({},editRes.cell,{teacherId:tid||null})}));
+      }} style={{width:"100%",marginBottom:12}}>
+       <option value="">-- Aucun --</option>
+       {teachers.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+      </Sel>
+      <Btn full onClick={()=>setEditRes(null)}>Fermer</Btn>
+     </div>
+    </div>
+   )}
+  </div>
+ );
+}
+
+// ── PLAN DE FORMATION ─────────────────────────────────────────────────────────
+function PFWeekTable({selWeek,visibleMatieres,pfGroup,matKey,getTarget,getTotal,getTotalR,updH,updR,updC,C,F}){
+ const pfSem=((pfGroup.semaines)||{})[selWeek]||{};
+ const heures=pfSem.heures||{};
+ const heuresR=pfSem.heuresRealisees||{};
+ const contenus=pfSem.contenus||{};
+ if(!visibleMatieres.length)return <div style={{color:C.mut,padding:20,textAlign:"center"}}>Aucune matiere pour ce groupe</div>;
+ return(
+  <div style={{overflowX:"auto"}}>
+   <table style={{borderCollapse:"collapse",width:"100%",fontSize:11,fontFamily:F,minWidth:600}}>
+    <thead><tr>
+     <th style={{background:C.brun,color:"#fff",padding:"5px 8px",textAlign:"left",fontSize:10,minWidth:100,position:"sticky",left:0}}>Matiere</th>
+     <th style={{background:C.brun,color:"#fff",padding:"5px 6px",textAlign:"center",fontSize:10,width:48}}>Prev.</th>
+     <th style={{background:C.brun,color:"#fff",padding:"5px 6px",textAlign:"center",fontSize:10,width:48}}>Real.</th>
+     <th style={{background:C.brun,color:"#fff",padding:"5px 6px",textAlign:"center",fontSize:10,width:48}}>Tot.P</th>
+     <th style={{background:C.brun,color:"#fff",padding:"5px 6px",textAlign:"center",fontSize:10,width:48}}>Tot.R</th>
+     <th style={{background:C.brun,color:"#fff",padding:"5px 8px",textAlign:"left",fontSize:10}}>Contenu / Sequence</th>
+    </tr></thead>
+    <tbody>
+     {visibleMatieres.map((m,mi)=>{
+      const key=matKey(m);
+      const vP=heures[key]||"";
+      const vR=heuresR[key]||"";
+      const cont=contenus[key]||"";
+      const target=getTarget(m);
+      const totP=getTotal(key);
+      const totR=getTotalR(key);
+      const isEven=mi%2===0;
+      const over=totR>target;
+      return(
+       <tr key={mi} style={{background:vR>0?"#edf4e0":isEven?"#fff":C.creme}}>
+        <td style={{padding:"4px 8px",borderRight:"1px solid "+C.bord,position:"sticky",left:0,background:vR>0?"#edf4e0":isEven?"#fff":C.creme}}>
+         <div style={{fontWeight:600,color:C.txt,fontSize:11}}>{m.subject.length>18?m.subject.slice(0,17)+"...":m.subject}</div>
+         <div style={{fontSize:9,color:C.dim}}>{m.teacherName.split(" ")[0]}</div>
+         <div style={{fontSize:8,color:over?C.red:Math.max(0,target-totR)<0.5?C.olive:C.mut}}>
+          {over?"Depasse":Math.max(0,target-totR)<0.5?"Complet":Math.max(0,target-totR).toFixed(1)+"h restantes"}
+         </div>
+        </td>
+        <td style={{padding:"3px 2px",borderRight:"1px solid "+C.bord,textAlign:"center"}}>
+         <input type="number" min={0} max={14} step={0.5} value={vP} onChange={e=>updH(selWeek,key,e.target.value)} placeholder="0"
+          style={{width:42,textAlign:"center",border:"1px solid "+(vP>0?C.olive:C.bord),borderRadius:4,padding:"2px",fontFamily:F,fontSize:11,background:vP>0?C.accD:"#fff",color:vP>0?C.olive:C.mut}}/>
+        </td>
+        <td style={{padding:"3px 6px",borderRight:"1px solid "+C.bord,textAlign:"center",
+         color:vR>0?C.brun:C.mut,fontWeight:vR>0?700:400,fontSize:12}}>
+         {vR>0?vR+"h":"-"}
+        </td>
+        <td style={{padding:"3px",textAlign:"center",borderRight:"1px solid "+C.bord,color:C.olive,fontWeight:600}}>{totP}h</td>
+        <td style={{padding:"3px",textAlign:"center",borderRight:"1px solid "+C.bord,color:over?C.red:C.brun,fontWeight:600}}>{totR}h<div style={{fontSize:8,color:C.mut}}>/{target}h</div></td>
+        <td style={{padding:"3px 6px"}}>
+         <input type="text" value={cont} onChange={e=>updC(selWeek,key,e.target.value)} placeholder="Theme, objectifs, outils..."
+          style={{width:"100%",border:"none",background:"transparent",fontFamily:F,fontSize:10,color:C.txt,outline:"none"}}/>
+        </td>
+       </tr>
+      );
+     })}
+    </tbody>
+   </table>
+  </div>
+ );
+}
+
+function PlanFormationPanel({state,setState,currentTeacher,cw,setCw,onGenerateWeek}){
+ const [selGroup,setSelGroup]=useState((state.groups[0]&&state.groups[0].id)||"");
+ const [selTeacher,setSelTeacher]=useState((currentTeacher&&currentTeacher.id)||"");
+ const [viewMode,setViewMode]=useState("weekly");
+ const [selModule,setSelModule]=useState("");
+ const [selWeek,setSelWeek]=useState(cw||getCurrentWeek());
+
+ const group=state.groups.find(g=>g.id===selGroup);
+ const pfGroup=((state.planFormation||{})[selGroup])||{semaines:{}};
+ const semaines=(group&&group.calendar||[]).filter(w=>w.present)
+  .sort((a,b)=>(a.week<30?a.week+52:a.week)-(b.week<30?b.week+52:b.week));
+ const matieres=state.matrix
+  .filter(m=>m.groupId===selGroup&&!m.isMGReceiver&&(m.hoursAnnual||0)>0)
+  .map(m=>{const t=state.teachers.find(x=>x.id===m.teacherId);return{...m,teacherName:(t&&t.name)||"?"};})
+  .sort((a,b)=>b.hoursAnnual-a.hoursAnnual);
+ const visibleMatieres=currentTeacher
+  ?matieres.filter(m=>m.teacherId===currentTeacher.id)
+  :selTeacher?matieres.filter(m=>m.teacherId===selTeacher):matieres;
+
+ function matKey(m){return m.subject+"|||"+m.teacherId;}
+ function getTarget(m){return Math.max(0,(m.hoursAnnual||0)-(m.hoursExam||0));}
+ function getTotal(key){
+  const sem=pfGroup.semaines||{};
+  return Math.round(Object.values(sem).reduce((s,w)=>s+((w.heures&&w.heures[key])||0),0)*10)/10;
+ }
+ function getTotalR(key){
+  const sem=pfGroup.semaines||{};
+  let total=0;
+  Object.entries(sem).forEach(([wn,w])=>{
+   total+=(w.heuresRealisees&&w.heuresRealisees[key])||0;
+  });
+  return Math.round(total*10)/10;
+ }
+ function updH(wn,key,val){
+  setState(p=>{
+   const npf={...(p.planFormation||{})};
+   const ng={...(npf[selGroup]||{semaines:{}})};
+   const ns={...(ng.semaines[wn]||{})};
+   ns.heures={...(ns.heures||{}),[key]:parseFloat(val)||0};
+   ng.semaines={...ng.semaines,[wn]:ns};npf[selGroup]=ng;
+   return{...p,planFormation:npf};
+  });
+ }
+ function updR(wn,key,val){
+  setState(p=>{
+   const npf={...(p.planFormation||{})};
+   const ng={...(npf[selGroup]||{semaines:{}})};
+   const ns={...(ng.semaines[wn]||{})};
+   ns.heuresRealisees={...(ns.heuresRealisees||{}),[key]:parseFloat(val)||0};
+   ng.semaines={...ng.semaines,[wn]:ns};npf[selGroup]=ng;
+   return{...p,planFormation:npf};
+  });
+ }
+ function updC(wn,key,val){
+  setState(p=>{
+   const npf={...(p.planFormation||{})};
+   const ng={...(npf[selGroup]||{semaines:{}})};
+   const ns={...(ng.semaines[wn]||{})};
+   ns.contenus={...(ns.contenus||{}),[key]:val};
+   ng.semaines={...ng.semaines,[wn]:ns};npf[selGroup]=ng;
+   return{...p,planFormation:npf};
+  });
+ }
+
+ function doGenerate(){
+  if(!onGenerateWeek)return;
+  onGenerateWeek(selWeek,selGroup);
+ }
+
+ const hasSched=!!(state.schedules&&state.schedules[selWeek]);
+ const pfSemTot=Object.values(((pfGroup.semaines||{})[selWeek]||{}).heures||{}).reduce((s,h)=>s+h,0);
+
+ const Header=(
+  <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}>
+   {!currentTeacher&&(
+    <Sel value={selGroup} onChange={e=>setSelGroup(e.target.value)} style={{minWidth:110}}>
+     {state.groups.filter(g=>state.matrix.some(m=>m.groupId===g.id&&!m.isMGReceiver)).map(g=>(
+      <option key={g.id} value={g.id}>{g.name}</option>
+     ))}
+    </Sel>
+   )}
+   {!currentTeacher&&(
+    <Sel value={selTeacher} onChange={e=>setSelTeacher(e.target.value)}>
+     <option value="">Tous</option>
+     {state.teachers.map(t=><option key={t.id} value={t.id}>{t.name.split(" ")[0]}</option>)}
+    </Sel>
+   )}
+   <Btn v={viewMode==="weekly"?"primary":"ghost"} sm onClick={()=>setViewMode("weekly")}>Semaine</Btn>
+   <Btn v={viewMode==="module"?"orange":"ghost"} sm onClick={()=>setViewMode("module")}>Par module</Btn>
+   <Btn v={viewMode==="global"?"outline":"ghost"} sm onClick={()=>setViewMode("global")}>Bilan annuel</Btn>
+  </div>
+ );
+
+ // VUE BILAN ANNUEL
+ if(viewMode==="global"){
+  const totalT=visibleMatieres.reduce((s,m)=>s+getTarget(m),0);
+  const totalP=visibleMatieres.reduce((s,m)=>s+getTotal(matKey(m)),0);
+  const totalR=visibleMatieres.reduce((s,m)=>s+getTotalR(matKey(m)),0);
+  return(
+   <div>
+    {Header}
+    <div style={{background:C.card,border:"1px solid "+C.bord,borderRadius:10,overflow:"hidden",marginBottom:10}}>
+     <div style={{background:C.surf,padding:"6px 12px",display:"grid",gridTemplateColumns:"1fr 60px 60px 60px 60px 80px",gap:4,fontSize:10,fontWeight:700,color:C.mut,textTransform:"uppercase"}}>
+      <span>Matiere</span><span style={{textAlign:"center"}}>Prevu</span><span style={{textAlign:"center"}}>Plan.</span><span style={{textAlign:"center"}}>Real.</span><span style={{textAlign:"center"}}>Reste</span><span>Avmt</span>
+     </div>
+     {visibleMatieres.map((m,i)=>{
+      const key=matKey(m);const target=getTarget(m);
+      const saisi=getTotal(key);const real=getTotalR(key);
+      const reste=Math.max(0,target-real);
+      const pP=target>0?Math.round(saisi/target*100):0;
+      const pR=target>0?Math.round(real/target*100):0;
+      return(
+       <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 60px 60px 60px 60px 80px",gap:4,padding:"6px 12px",borderTop:"1px solid "+C.bord,alignItems:"center"}}>
+        <div><div style={{fontSize:12,fontWeight:600,color:C.txt}}>{m.subject}</div><div style={{fontSize:10,color:C.dim}}>{m.teacherName.split(" ")[0]}</div></div>
+        <div style={{textAlign:"center",color:C.dim,fontSize:12}}>{target}h</div>
+        <div style={{textAlign:"center",color:C.olive,fontWeight:700,fontSize:12}}>{saisi}h</div>
+        <div style={{textAlign:"center",color:real>0?C.brun:C.mut,fontWeight:real>0?700:400,fontSize:12}}>{real}h</div>
+        <div style={{textAlign:"center",color:reste>0?C.brun:C.olive,fontSize:12}}>{reste}h</div>
+        <div>
+         <div style={{background:C.creme,borderRadius:2,height:4,overflow:"hidden",marginBottom:1}}><div style={{width:Math.min(100,pP)+"%",background:C.olive,height:"100%"}}/></div>
+         <div style={{background:C.creme,borderRadius:2,height:4,overflow:"hidden"}}><div style={{width:Math.min(100,pR)+"%",background:C.brun,height:"100%"}}/></div>
+         <div style={{fontSize:8,color:C.mut}}>P:{pP}% R:{pR}%</div>
+        </div>
+       </div>
+      );
+     })}
+    </div>
+    <div style={{background:C.yelD||"#faf3e0",border:"1px solid "+C.ocre,borderRadius:8,padding:"8px 14px",display:"flex",gap:16,flexWrap:"wrap",alignItems:"center"}}>
+     <div><div style={{color:C.mut,fontSize:10}}>Total prevu</div><strong style={{color:C.brun}}>{totalT}h</strong></div>
+     <div><div style={{color:C.mut,fontSize:10}}>Planifie</div><strong style={{color:C.olive}}>{totalP}h</strong></div>
+     <div><div style={{color:C.mut,fontSize:10}}>Realise</div><strong style={{color:C.brun}}>{totalR}h</strong></div>
+    </div>
+   </div>
+  );
+ }
+
+ // VUE PAR MODULE
+ if(viewMode==="module"){
+  const mk=selModule;
+  const mo=mk?visibleMatieres.find((_,i)=>matKey(visibleMatieres[i])===mk):null;
+  const target=mo?getTarget(mo):0;
+  const totP=mo?getTotal(mk):0;
+  const totR=mo?getTotalR(mk):0;
+  return(
+   <div>
+    {Header}
+    <Sel value={selModule} onChange={e=>setSelModule(e.target.value)} style={{width:"100%",marginBottom:10}}>
+     <option value="">-- Choisir un module --</option>
+     {visibleMatieres.map((m,i)=>(
+      <option key={i} value={matKey(m)}>{m.subject} ({m.teacherName.split(" ")[0]}) — {getTarget(m)}h</option>
+     ))}
+    </Sel>
+    {mo&&(
+     <div>
+      <div style={{background:C.card,border:"1px solid "+C.bord,borderRadius:10,padding:"10px 14px",marginBottom:10}}>
+       <div style={{fontFamily:FS,fontSize:14,fontWeight:700,color:C.brun}}>{mo.subject}</div>
+       <div style={{fontSize:11,color:C.dim,marginBottom:6}}>{mo.teacherName} — {target}h annuelles</div>
+       <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"center"}}>
+        <div><div style={{fontSize:10,color:C.mut}}>Planifie</div><strong style={{color:C.olive}}>{totP}h</strong></div>
+        <div><div style={{fontSize:10,color:C.mut}}>Realise</div><strong style={{color:C.brun}}>{totR}h</strong></div>
+        <div><div style={{fontSize:10,color:C.mut}}>Reste</div><strong style={{color:C.dim}}>{Math.max(0,target-totR)}h</strong></div>
+        <div style={{flex:1,minWidth:100}}>
+         <div style={{background:C.creme,borderRadius:3,height:5,overflow:"hidden",marginBottom:2}}><div style={{width:Math.min(100,target>0?Math.round(totP/target*100):0)+"%",background:C.olive,height:"100%"}}/></div>
+         <div style={{background:C.creme,borderRadius:3,height:5,overflow:"hidden"}}><div style={{width:Math.min(100,target>0?Math.round(totR/target*100):0)+"%",background:C.brun,height:"100%"}}/></div>
+        </div>
+       </div>
+      </div>
+      <table style={{borderCollapse:"collapse",width:"100%",fontSize:11,fontFamily:F}}>
+       <thead><tr>
+        <th style={{background:C.brun,color:"#fff",padding:"5px 8px",textAlign:"left",width:110,fontSize:10}}>Semaine</th>
+        <th style={{background:C.brun,color:"#fff",padding:"5px 6px",textAlign:"center",width:50,fontSize:10}}>Prev.</th>
+        <th style={{background:C.brun,color:"#fff",padding:"5px 6px",textAlign:"center",width:50,fontSize:10}}>Real.</th>
+        <th style={{background:C.brun,color:"#fff",padding:"5px 8px",textAlign:"left",fontSize:10}}>Theme / Contenu</th>
+       </tr></thead>
+       <tbody>
+        {semaines.map((sem,si)=>{
+         const wn=sem.week;
+         const pfSem=((pfGroup.semaines)||{})[wn]||{};
+         const vP=(pfSem.heures&&pfSem.heures[mk])||"";
+         const vR=(pfSem.heuresRealisees&&pfSem.heuresRealisees[mk])||"";
+         const cont=((pfSem.contenus)||{})[mk]||"";
+         return(
+          <tr key={wn} style={{background:vR>0?C.accD:si%2===0?"#fff":C.creme}}>
+           <td style={{padding:"4px 8px",borderBottom:"1px solid "+C.bord,fontWeight:600,color:C.brun,fontSize:11}}>{getWeekLabel(wn)}</td>
+           <td style={{padding:"3px",borderBottom:"1px solid "+C.bord,textAlign:"center"}}>
+            <input type="number" min={0} max={14} step={0.5} value={vP} onChange={e=>updH(wn,mk,e.target.value)} placeholder="0"
+             style={{width:42,textAlign:"center",border:"1px solid "+(vP>0?C.olive:C.bord),borderRadius:4,padding:"2px",fontFamily:F,fontSize:11,background:vP>0?C.accD:"#fff",color:vP>0?C.olive:C.mut}}/>
+           </td>
+           <td style={{padding:"3px 6px",borderBottom:"1px solid "+C.bord,textAlign:"center",
+            color:vR>0?C.brun:C.mut,fontWeight:vR>0?700:400,fontSize:12}}>
+            {vR>0?vR+"h":"-"}
+           </td>
+           <td style={{padding:"3px 6px",borderBottom:"1px solid "+C.bord}}>
+            <input type="text" value={cont} onChange={e=>updC(wn,mk,e.target.value)} placeholder="Theme, objectifs, activites..."
+             style={{width:"100%",border:"none",background:"transparent",fontFamily:F,fontSize:10,color:C.txt,outline:"none"}}/>
+           </td>
+          </tr>
+         );
+        })}
+       </tbody>
+      </table>
+     </div>
+    )}
+    {!mo&&<div style={{color:C.mut,padding:20,textAlign:"center"}}>Selectionnez un module pour voir et saisir l'annee complete.</div>}
+   </div>
+  );
+ }
+
+ // VUE SEMAINE
+ return(
+  <div>
+   {Header}
+   <WeekCalendar groups={state.groups} selectedGroup={selGroup} selectedWeek={selWeek}
+    onSelectWeek={wn=>{setSelWeek(wn);if(setCw)setCw(wn);}}
+    schedules={state.schedules} planFormation={state.planFormation}/>
+   <div style={{background:C.surf,border:"1px solid "+C.bord,borderRadius:10,padding:"8px 12px",marginBottom:8}}>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+     <div>
+      <div style={{fontFamily:FS,fontSize:14,fontWeight:700,color:C.brun}}>{getWeekLabel(selWeek)}</div>
+      <div style={{fontSize:10,color:C.mut,marginTop:1,display:"flex",gap:8}}>
+       {hasSched&&<span style={{color:C.olive,fontWeight:600}}>Planning OK</span>}
+       {pfSemTot>0&&<span>{pfSemTot}h prevues</span>}
+      </div>
+     </div>
+     <div style={{display:"flex",gap:4}}>
+      <Btn v={hasSched?"ghost":"success"} sm onClick={doGenerate}>
+       {hasSched?"Regenerer S"+selWeek:"Generer S"+selWeek}
+      </Btn>
+      <Btn v="ghost" sm onClick={()=>{const idx=semaines.findIndex(s=>s.week===selWeek);if(idx>0){const w=semaines[idx-1].week;setSelWeek(w);if(setCw)setCw(w);}}}>{"<"}</Btn>
+      <Btn v="ghost" sm onClick={()=>{const idx=semaines.findIndex(s=>s.week===selWeek);if(idx<semaines.length-1){const w=semaines[idx+1].week;setSelWeek(w);if(setCw)setCw(w);}}}>{">"}</Btn>
+     </div>
+    </div>
+   </div>
+   {(state.lockedWeeks&&state.lockedWeeks[selWeek])&&(
+    <div style={{background:"#e8f5e9",border:"1px solid "+C.olive,borderRadius:8,padding:"8px 12px",marginBottom:8,display:"flex",alignItems:"center",gap:10}}>
+     <span style={{fontSize:16}}>🔒</span>
+     <span style={{fontSize:12,fontWeight:700,color:C.olive}}>S{selWeek} validee et verrouillee — planning fige</span>
+    </div>
+   )}
+   <PFWeekTable selWeek={selWeek} visibleMatieres={visibleMatieres}
+    pfGroup={pfGroup} matKey={matKey} getTarget={getTarget}
+    getTotal={getTotal} getTotalR={getTotalR}
+    updH={updH} updR={updR} updC={updC} C={C} F={F}/>
+  </div>
+ );
+}
+
+// ── MATRICEEDITOR SIMPLIFIÉ ───────────────────────────────────────────────────
+function MatrixEditor({state,setState}){
+ const [selGroup,setSelGroup]=useState((state.groups[0]&&state.groups[0].id)||"");
+ const rows=state.matrix.filter(m=>m.groupId===selGroup&&!m.isMGReceiver);
+ function addRow(){
+  const t=state.teachers[0];
+  if(!t)return;
+  setState(p=>({...p,matrix:[...p.matrix,{id:uid(),groupId:selGroup,teacherId:t.id,subject:"Nouvelle matiere",hoursAnnual:20,hoursExam:0,courseType:"MP"}]}));
+ }
+ function updRow(id,field,val){
+  setState(p=>({...p,matrix:p.matrix.map(m=>m.id===id?{...m,[field]:field==="hoursAnnual"||field==="hoursExam"?parseFloat(val)||0:val}:m)}));
+ }
+ function delRow(id){
+  setState(p=>({...p,matrix:p.matrix.filter(m=>m.id!==id)}));
+ }
+ return(
+  <div>
+   <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"center"}}>
+    <Sel value={selGroup} onChange={e=>setSelGroup(e.target.value)} style={{minWidth:120}}>
+     {state.groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}
+    </Sel>
+    <Btn sm onClick={addRow}>+ Ajouter</Btn>
+    <span style={{color:C.mut,fontSize:11}}>{rows.length} ligne(s)</span>
+   </div>
+   <div style={{overflowX:"auto"}}>
+    <table style={{borderCollapse:"collapse",width:"100%",fontSize:11,fontFamily:F}}>
+     <thead><tr>
+      <th style={{background:C.brun,color:"#fff",padding:"5px 8px",textAlign:"left",fontSize:10}}>Matiere</th>
+      <th style={{background:C.brun,color:"#fff",padding:"5px 8px",textAlign:"left",fontSize:10}}>Formateur</th>
+      <th style={{background:C.brun,color:"#fff",padding:"5px 8px",textAlign:"center",fontSize:10,width:60}}>H.Ann.</th>
+      <th style={{background:C.brun,color:"#fff",padding:"5px 8px",textAlign:"center",fontSize:10,width:60}}>H.Exam</th>
+      <th style={{background:C.brun,color:"#fff",padding:"5px 8px",textAlign:"center",fontSize:10,width:30}}></th>
+     </tr></thead>
+     <tbody>
+      {rows.map((m,i)=>(
+       <tr key={m.id} style={{background:i%2===0?"#fff":C.creme}}>
+        <td style={{padding:"3px 6px",borderRight:"1px solid "+C.bord}}>
+         <input type="text" value={m.subject} onChange={e=>updRow(m.id,"subject",e.target.value)}
+          style={{width:"100%",border:"none",background:"transparent",fontFamily:F,fontSize:11,color:C.txt,outline:"none"}}/>
+        </td>
+        <td style={{padding:"3px 6px",borderRight:"1px solid "+C.bord}}>
+         <Sel value={m.teacherId} onChange={e=>updRow(m.id,"teacherId",e.target.value)} style={{width:"100%",border:"none",background:"transparent",padding:"2px"}}>
+          {state.teachers.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+         </Sel>
+        </td>
+        <td style={{padding:"3px",borderRight:"1px solid "+C.bord,textAlign:"center"}}>
+         <input type="number" value={m.hoursAnnual} onChange={e=>updRow(m.id,"hoursAnnual",e.target.value)}
+          style={{width:52,textAlign:"center",border:"none",background:"transparent",fontFamily:F,fontSize:11}}/>
+        </td>
+        <td style={{padding:"3px",borderRight:"1px solid "+C.bord,textAlign:"center"}}>
+         <input type="number" value={m.hoursExam} onChange={e=>updRow(m.id,"hoursExam",e.target.value)}
+          style={{width:52,textAlign:"center",border:"none",background:"transparent",fontFamily:F,fontSize:11}}/>
+        </td>
+        <td style={{padding:"3px",textAlign:"center"}}>
+         <button onClick={()=>delRow(m.id)} style={{background:"none",border:"none",color:C.red,cursor:"pointer",fontSize:14,padding:2}}>x</button>
+        </td>
+       </tr>
+      ))}
+     </tbody>
+    </table>
+   </div>
+   {/* Modale assignation formateur accueil/bilan */}
+   {editRes&&(
+    <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,.4)",
+    display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}
+    onClick={()=>setEditRes(null)}>
+     <div style={{background:"#fff",borderRadius:12,padding:24,minWidth:280,maxWidth:360}}
+      onClick={e=>e.stopPropagation()}>
+      <div style={{fontFamily:FS,fontSize:15,fontWeight:700,color:C.brun,marginBottom:4}}>
+       {editRes.cell.subject}
+      </div>
+      <div style={{fontSize:12,color:C.mut,marginBottom:16}}>Assigner un formateur (optionnel)</div>
+      <Sel value={editRes.cell.teacherId||""} onChange={e=>{
+       const tid=e.target.value;
+       const newGs=JSON.parse(JSON.stringify(gs));
+       if(!newGs[editRes.di])newGs[editRes.di]={};
+       newGs[editRes.di][editRes.si]=Object.assign({},editRes.cell,{teacherId:tid||null});
+       updateSchedule(newGs);
+       setEditRes(Object.assign({},editRes,{cell:Object.assign({},editRes.cell,{teacherId:tid||null})}));
+      }} style={{width:"100%",marginBottom:12}}>
+       <option value="">-- Aucun --</option>
+       {teachers.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+      </Sel>
+      <Btn full onClick={()=>setEditRes(null)}>Fermer</Btn>
+     </div>
+    </div>
+   )}
+  </div>
+ );
+}
+
+// ── DIRECTOR SPACE ────────────────────────────────────────────────────────────
+
+function RecapPanel({state,setState}){
+ const [selGroup,setSelGroup]=useState((state.groups[0]&&state.groups[0].id)||"");
+ const group=state.groups.find(g=>g.id===selGroup);
+ const pfGroup=((state.planFormation||{})[selGroup])||{semaines:{}};
+ const semaines=(group&&group.calendar||[]).filter(w=>w.present)
+  .sort((a,b)=>(a.week<30?a.week+52:a.week)-(b.week<30?b.week+52:b.week));
+ const matieres=state.matrix
+  .filter(m=>m.groupId===selGroup&&!m.isMGReceiver&&(m.hoursAnnual||0)>0)
+  .map(m=>{const t=state.teachers.find(x=>x.id===m.teacherId);return{...m,teacherName:(t&&t.name)||"?"};})
+  .sort((a,b)=>b.hoursAnnual-a.hoursAnnual);
+
+ // Helpers mise à jour planFormation
+ function updField(wn,field,val){
+  setState(p=>{
+   const npf=Object.assign({},p.planFormation||{});
+   const ng=Object.assign({},npf[selGroup]||{semaines:{}});
+   const ns=Object.assign({},ng.semaines[wn]||{});
+   ns[field]=val;
+   ng.semaines=Object.assign({},ng.semaines,{[wn]:ns});
+   npf[selGroup]=ng;
+   return Object.assign({},p,{planFormation:npf});
+  });
+ }
+ function updH(wn,key,val){
+  setState(p=>{
+   const npf=Object.assign({},p.planFormation||{});
+   const ng=Object.assign({},npf[selGroup]||{semaines:{}});
+   const ns=Object.assign({},ng.semaines[wn]||{});
+   ns.heures=Object.assign({},ns.heures||{},{[key]:parseFloat(val)||0});
+   ng.semaines=Object.assign({},ng.semaines,{[wn]:ns});
+   npf[selGroup]=ng;
+   return Object.assign({},p,{planFormation:npf});
+  });
+ }
+ function updCont(wn,key,val){
+  setState(p=>{
+   const npf=Object.assign({},p.planFormation||{});
+   const ng=Object.assign({},npf[selGroup]||{semaines:{}});
+   const ns=Object.assign({},ng.semaines[wn]||{});
+   ns.contenus=Object.assign({},ns.contenus||{},{[key]:val});
+   ng.semaines=Object.assign({},ng.semaines,{[wn]:ns});
+   npf[selGroup]=ng;
+   return Object.assign({},p,{planFormation:npf});
+  });
+ }
+
+ // EPI pour ce groupe
+ const epiGroups=["4ème","3ème A","3ème B"];
+ const isEpiGroup=group&&epiGroups.indexOf(group.name)>=0;
+ const epiPlan=(state.epiPlanning&&state.epiPlanning[selGroup])||{};
+
+ function getCell(wn,key){
+  const sem=(pfGroup.semaines||{})[wn]||{};
+  const h=(sem.heures&&sem.heures[key])||0;
+  const r=(sem.heuresRealisees&&sem.heuresRealisees[key])||0;
+  const cont=((sem.contenus)||{})[key]||"";
+  return{h,r,cont};
+ }
+
+ if(!matieres.length)return(
+  <div style={{textAlign:"center",padding:40,color:C.mut}}>
+   Chargez un JSON et configurez la matrice pour voir le tableau.
+  </div>
+ );
+
+ const thStyle={background:C.brun,color:"#fff",padding:"5px 6px",
+  textAlign:"center",minWidth:90,fontSize:9,fontWeight:600,verticalAlign:"middle"};
+ const stickyL0={position:"sticky",left:0,zIndex:2};
+ const stickyL1={position:"sticky",left:140,zIndex:2};
+
+ return(
+  <div>
+   <div style={{display:"flex",gap:8,marginBottom:12,alignItems:"center"}}>
+    <Sel value={selGroup} onChange={e=>setSelGroup(e.target.value)} style={{minWidth:120}}>
+     {state.groups.filter(g=>state.matrix.some(m=>m.groupId===g.id&&!m.isMGReceiver)).map(g=>(
+      <option key={g.id} value={g.id}>{g.name}</option>
+     ))}
+    </Sel>
+    <span style={{fontSize:11,color:C.mut}}>{matieres.length} modules — {semaines.length} semaines</span>
+   </div>
+   <div style={{overflowX:"auto",overflowY:"auto",maxHeight:"75vh",border:"1px solid "+C.bord,borderRadius:8}}>
+    <table style={{borderCollapse:"collapse",fontFamily:F,fontSize:10}}>
+     <thead>
+      <tr>
+       <th style={{...thStyle,...stickyL0,minWidth:140,textAlign:"left",padding:"5px 8px"}}>Module</th>
+       <th style={{...thStyle,...stickyL1,width:45}}>Total</th>
+       {semaines.map(sem=>(
+        <th key={sem.week} style={{...thStyle,minWidth:90}}>
+         {getWeekLabel(sem.week).split(" ").slice(1).join(" ")}
+         <div style={{fontWeight:400,opacity:.8,fontSize:8}}>S{sem.week}</div>
+        </th>
+       ))}
+      </tr>
+     </thead>
+     <tbody>
+
+      {/* ── LIGNE THÈME DE LA SEMAINE ── */}
+      <tr style={{background:"#fffde7"}}>
+       <td style={{...stickyL0,background:"#fffde7",padding:"4px 8px",borderRight:"1px solid "+C.bord,
+        fontWeight:700,color:C.ocre,fontSize:11}}>
+        Theme de la semaine
+       </td>
+       <td style={{...stickyL1,background:"#fffde7",padding:"3px",borderRight:"2px solid "+C.bord,textAlign:"center",color:C.mut,fontSize:9}}>
+        —
+       </td>
+       {semaines.map(sem=>{
+        const wn=sem.week;
+        const val=((pfGroup.semaines||{})[wn]||{}).theme||"";
+        return(
+         <td key={wn} style={{padding:"3px",borderRight:"1px solid "+C.bord,borderBottom:"2px solid "+C.ocre}}>
+          <input type="text" value={val} onChange={e=>updField(wn,"theme",e.target.value)}
+           placeholder="Theme..."
+           style={{width:"100%",border:"none",background:"transparent",fontFamily:F,
+           fontSize:9,color:C.txt,outline:"none",minWidth:80}}/>
+         </td>
+        );
+       })}
+      </tr>
+
+      {/* ── LIGNE EPI ── */}
+      {isEpiGroup&&(
+       <tr style={{background:"#f1f8e9"}}>
+        <td style={{...stickyL0,background:"#f1f8e9",padding:"4px 8px",borderRight:"1px solid "+C.bord,
+         fontWeight:700,color:C.olive,fontSize:11}}>
+         EPI
+        </td>
+        <td style={{...stickyL1,background:"#f1f8e9",padding:"3px",borderRight:"2px solid "+C.bord,textAlign:"center",color:C.mut,fontSize:9}}>
+         —
+        </td>
+        {semaines.map(sem=>{
+         const wn=sem.week;
+         const epiWk=(epiPlan[wn])||{};
+         const t1=state.teachers.find(t=>t.id===epiWk.t1);
+         const t2=state.teachers.find(t=>t.id===epiWk.t2);
+         const theme=epiWk.theme||"";
+         const h=epiWk.heures||"";
+         return(
+          <td key={wn} style={{padding:"3px 4px",borderRight:"1px solid "+C.bord,
+           borderBottom:"2px solid "+C.olive,verticalAlign:"top",background:epiWk.t1?"#e8f5e9":"#f1f8e9",minWidth:90}}>
+          <div style={{display:"flex",flexDirection:"column",gap:2}}>
+           <Sel value={epiWk.t1||""} onChange={e=>{
+            setState(p=>{const ep=Object.assign({},p.epiPlanning||{});ep[selGroup]=Object.assign({},ep[selGroup]||{});ep[selGroup][wn]=Object.assign({},ep[selGroup][wn]||{t1:"",t2:"",heures:6,theme:""},{t1:e.target.value});return Object.assign({},p,{epiPlanning:ep});});
+           }} style={{fontSize:8,padding:"1px 2px",border:"1px solid "+C.bord,borderRadius:3,width:"100%"}}>
+            <option value="">F1 --</option>
+            {state.teachers.map(t=><option key={t.id} value={t.id}>{t.name.split(" ")[0]}</option>)}
+           </Sel>
+           <Sel value={epiWk.t2||""} onChange={e=>{
+            setState(p=>{const ep=Object.assign({},p.epiPlanning||{});ep[selGroup]=Object.assign({},ep[selGroup]||{});ep[selGroup][wn]=Object.assign({},ep[selGroup][wn]||{t1:"",t2:"",heures:6,theme:""},{t2:e.target.value});return Object.assign({},p,{epiPlanning:ep});});
+           }} style={{fontSize:8,padding:"1px 2px",border:"1px solid "+C.bord,borderRadius:3,width:"100%"}}>
+            <option value="">F2 --</option>
+            {state.teachers.map(t=><option key={t.id} value={t.id}>{t.name.split(" ")[0]}</option>)}
+           </Sel>
+           <input type="number" min={1} max={14} step={0.5} value={epiWk.heures||""} placeholder="h"
+            onChange={e=>{
+             setState(p=>{const ep=Object.assign({},p.epiPlanning||{});ep[selGroup]=Object.assign({},ep[selGroup]||{});ep[selGroup][wn]=Object.assign({},ep[selGroup][wn]||{t1:"",t2:"",heures:6,theme:""},{heures:parseFloat(e.target.value)||6});return Object.assign({},p,{epiPlanning:ep});});
+            }}
+            style={{width:"100%",border:"1px solid "+C.bord,borderRadius:3,padding:"1px 3px",fontFamily:F,fontSize:8,textAlign:"center"}}/>
+           <input type="text" value={epiWk.theme||""} placeholder="Theme..."
+            onChange={e=>{
+             setState(p=>{const ep=Object.assign({},p.epiPlanning||{});ep[selGroup]=Object.assign({},ep[selGroup]||{});ep[selGroup][wn]=Object.assign({},ep[selGroup][wn]||{t1:"",t2:"",heures:6,theme:""},{theme:e.target.value});return Object.assign({},p,{epiPlanning:ep});});
+            }}
+            style={{width:"100%",border:"none",background:"transparent",fontFamily:F,fontSize:8,color:C.dim,outline:"none"}}/>
+          </div>
+         </td>
+         );
+        })}
+       </tr>
+      )}
+
+      {/* ── LIGNES MODULES ── */}
+      {matieres.map((m,mi)=>{
+       const key=m.subject+"|||"+m.teacherId;
+       const target=Math.max(0,(m.hoursAnnual||0)-(m.hoursExam||0));
+       const totalH=semaines.reduce((s,sem)=>s+(getCell(sem.week,key).h||0),0);
+       const totalR=semaines.reduce((s,sem)=>s+(getCell(sem.week,key).r||0),0);
+       const isEven=mi%2===0;
+       const rowBg=isEven?"#fff":C.creme;
+       return(
+        <tr key={mi}>
+         <td style={{...stickyL0,background:rowBg,padding:"4px 8px",
+          borderRight:"1px solid "+C.bord,borderBottom:"1px solid "+C.bord}}>
+          <div style={{fontWeight:700,color:C.txt,fontSize:10}}>{m.subject.length>20?m.subject.slice(0,19)+"...":m.subject}</div>
+          <div style={{fontSize:9,color:C.dim}}>{m.teacherName.split(" ")[0]}</div>
+         </td>
+         <td style={{...stickyL1,background:rowBg,padding:"3px 4px",textAlign:"center",
+          borderRight:"2px solid "+C.bord,borderBottom:"1px solid "+C.bord}}>
+          <div style={{color:totalH>target?C.red:totalH>0?C.olive:C.mut,fontWeight:700,fontSize:10}}>
+           {totalH||0}h{totalH>target&&" !"}
+          </div>
+          <div style={{fontSize:8,color:C.mut}}>/{target}h</div>
+          {target>0&&<div style={{background:C.creme,borderRadius:2,height:3,overflow:"hidden",margin:"2px 0"}}>
+           <div style={{width:Math.min(100,Math.round((totalH/target)*100))+"%",
+            background:totalH>target?C.red:totalH>=target?C.olive:C.ocre,height:"100%"}}/>
+          </div>}
+          {totalR>0&&<div style={{fontSize:8,color:C.brun}}>{totalR}h R</div>}
+         </td>
+         {semaines.map(sem=>{
+          const wn=sem.week;
+          const {h,r,cont}=getCell(wn,key);
+          const cellBg=r>0?"#edf4e0":h>0?C.accD:rowBg;
+          return(
+           <td key={wn} style={{padding:"2px 3px",borderRight:"1px solid "+C.bord,
+            borderBottom:"1px solid "+C.bord,background:cellBg,verticalAlign:"top",minWidth:90}}>
+            <div style={{display:"flex",gap:2,marginBottom:2,alignItems:"center"}}>
+             <input type="number" min={0} max={target} step={0.5} value={h||""}
+              onChange={e=>{
+               const val=parseFloat(e.target.value)||0;
+               if(val>target){alert("Depassement: max "+target+"h pour ce module.");return;}
+               updH(wn,key,e.target.value);
+              }}
+              placeholder="0"
+              style={{width:30,border:"none",background:"transparent",fontFamily:F,
+              fontSize:9,color:totalH>target?C.red:C.olive,fontWeight:700,outline:"none",textAlign:"center"}}/>
+             {r>0&&<span style={{color:C.brun,fontSize:9,fontWeight:600}}>/{r}R</span>}
+            </div>
+            <input type="text" value={cont}
+             onChange={e=>updCont(wn,key,e.target.value)}
+             placeholder="Contenu..."
+             style={{width:"100%",border:"none",background:"transparent",fontFamily:F,
+             fontSize:8,color:C.dim,outline:"none",lineHeight:1.3}}/>
+           </td>
+          );
+         })}
+        </tr>
+       );
+      })}
+     </tbody>
+    </table>
+   </div>
+  </div>
+ );
+}
+function DirectorSpace({state,setState,onLogout,saveStatus}){
+ const [tab,setTab]=useState("plan");
+ const [cw,setCw]=useState(state.currentWeek||getCurrentWeek());
+ const [viewGroup,setViewGroup]=useState((state.groups[0]&&state.groups[0].id)||"");
+ const [schResult,setSchResult]=useState(null);
+ const [aiStatus,setAiStatus]=useState("");
+
+ function clearWeek(wn, groupId){
+  if(state.lockedWeeks&&(state.lockedWeeks[wn]||state.lockedWeeks[String(wn)])){
+   alert("Semaine S"+wn+" verrouillee.");
+   return;
+  }
+  var wnStr=String(wn);
+  setState(function(p){
+   var ns=Object.assign({},p.schedules||{});
+   var newBank=(p.bank||[]).filter(function(b){
+    if(String(b.cw)!==wnStr) return true;
+    if(groupId&&b.groupId!==groupId) return true;
+    return false;
+   });
+   if(groupId){
+    if(ns[wnStr]){
+     var nw=Object.assign({},ns[wnStr]);
+     delete nw[groupId];
+     ns[wnStr]=nw;
+    }
+   } else {
+    delete ns[wnStr];
+   }
+   return Object.assign({},p,{schedules:ns,schedule:null,bank:newBank});
+  });
+  setSchResult(null);
+ }
+ function lockWeek(wn){
+  var wnStr=String(wn);
+  if(!(state.schedules&&(state.schedules[wn]||state.schedules[wnStr]))){
+   alert("Aucun planning genere pour S"+wn+". Generez-le d'abord.");
+   return;
+  }
+  setState(function(p){
+   return Object.assign({},p,{lockedWeeks:Object.assign({},p.lockedWeeks||{},{[wnStr]:true})});
+  });
+ }
+ function unlockWeek(wn){
+  var wnStr=String(wn);
+  setState(function(p){
+   var lw=Object.assign({},p.lockedWeeks||{});
+   delete lw[wnStr];
+   delete lw[wn];
+   return Object.assign({},p,{lockedWeeks:lw});
+  });
+ }
+ function buildPfHints(wn, groupId){
+  const pfH={};
+  const grps=groupId?state.groups.filter(g=>g.id===groupId):state.groups;
+  grps.forEach(g=>{
+   const sem=(state.planFormation&&state.planFormation[g.id]&&state.planFormation[g.id].semaines&&state.planFormation[g.id].semaines[wn]&&state.planFormation[g.id].semaines[wn].heures)||{};
+   if(Object.keys(sem).length>0)pfH[g.id]=sem;
+  });
+  return pfH;
+ }
+
+ async function doGenerate(wn, groupId){
+  if(state.lockedWeeks&&(state.lockedWeeks[wn]||state.lockedWeeks[String(wn)])){
+   alert("La semaine S"+wn+" est validee et verrouillee. Deverrouillez-la d'abord.");
+   return;
+  }
+  try{
+   _cm={};_ci=0;
+   const pfH=buildPfHints(wn);
+   const res=genSchedule(state,wn,pfH,groupId||null);
+   const ns={...(state.schedules||{}),[wn]:res.schedule};
+   const real=computeRealisees(res.schedule,wn,state.groups,state.etab||DEFAULT_ETAB);
+   const npf={...(state.planFormation||{})};
+   state.groups.forEach(g=>{
+    const ghr=real[g.id]||{};
+    if(!Object.keys(ghr).length)return;
+    npf[g.id]={...(npf[g.id]||{semaines:{}})};
+    npf[g.id].semaines={...(npf[g.id].semaines||{})};
+    npf[g.id].semaines[wn]={...(npf[g.id].semaines[wn]||{}),heuresRealisees:ghr};
+   });
+   setState(p=>({...p,schedule:res.schedule,schedules:ns,currentWeek:wn,planFormation:npf}));
+   setCw(wn);
+   setSchResult(res);
+   if(tab!=="planning")setTab("planning");
+  }catch(e){alert("Erreur generation: "+e.message);console.error(e);}
+  finally{setAiStatus("");}
+ }
+
+ function loadJSON(){
+  const inp=document.createElement("input");
+  inp.type="file";inp.accept=".json";
+  inp.onchange=function(e){
+   const file=e.target.files[0];if(!file)return;
+   const r=new FileReader();
+   r.onload=function(ev){
+    try{
+     const d=JSON.parse(ev.target.result);
+     const ms=migrateState(d);
+     setState(ms);
+     alert("JSON charge : "+ms.teachers.length+" formateurs, "+ms.groups.length+" groupes, "+ms.matrix.length+" lignes matrice");
+    }catch(ex){alert("Erreur lecture JSON: "+ex.message);}
+   };
+   r.readAsText(file);
+  };
+  inp.click();
+ }
+
+ function saveJSON(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="mfr-planning-"+new Date().toISOString().slice(0,10)+".json";
+  a.click();
+ }
+
+ const TABS=[
+  {id:"plan",l:"Plan de formation"},
+  {id:"planning",l:"Planning"},
+  {id:"recap",l:"Recapitulatif"},
+  {id:"matrix",l:"Matrice"},
+  {id:"import",l:"Import / Export"},
+ ];
+
+ return(
+  <div style={{minHeight:"100vh",background:C.bg,fontFamily:F}}>
+   {/* Header */}
+   <div style={{background:C.surf,borderBottom:"1px solid "+C.bord,padding:"0 16px",display:"flex",alignItems:"center",gap:12}}>
+    <div style={{fontFamily:FS,fontWeight:700,color:C.brun,fontSize:14,padding:"12px 0"}}>Planning MFR v{APP_VERSION}</div>
+    <div style={{flex:1,display:"flex",gap:4,overflowX:"auto"}}>
+     {TABS.map(t=>(
+      <button key={t.id} onClick={()=>setTab(t.id)}
+       style={{padding:"12px 14px",border:"none",borderBottom:"2px solid "+(tab===t.id?C.olive:"transparent"),
+       background:"transparent",cursor:"pointer",fontFamily:F,fontSize:12,fontWeight:tab===t.id?700:400,
+       color:tab===t.id?C.olive:C.dim,whiteSpace:"nowrap"}}>
+       {t.l}
+      </button>
+     ))}
+    </div>
+    <div style={{display:"flex",gap:6,alignItems:"center"}}>
+     <span style={{fontSize:10,color:saveStatus==="saved"?C.olive:saveStatus==="saving"?C.ocre:C.red}}>
+      {saveStatus==="saved"?"Sauvegarde":saveStatus==="saving"?"Sauvegarde...":"Erreur"}
+     </span>
+     <Btn v="ghost" sm onClick={saveJSON}>Export JSON</Btn>
+     <button onClick={()=>setState(p=>Object.assign({},p,{useAI:p.useAI===false?true:false}))}
+      style={{fontSize:10,padding:"3px 8px",borderRadius:6,border:"1px solid "+C.bord,
+      background:state.useAI===false?C.creme:C.accD,cursor:"pointer",fontFamily:F,
+      color:state.useAI===false?C.mut:C.olive,fontWeight:600}}>
+      {state.useAI===false?"IA desactivee":"IA activee"}
+     </button>
+     <Btn v="ghost" sm onClick={onLogout}>Deconnexion</Btn>
+    </div>
+   </div>
+   {/* Contenu */}
+   <div style={{padding:16,maxWidth:1200,margin:"0 auto"}}>
+    {tab==="plan"&&(
+     <PlanFormationPanel state={state} setState={setState} currentTeacher={null}
+      cw={cw} setCw={setCw} onGenerateWeek={(wn,gid)=>doGenerate(wn,gid)}/>
+    )}
+    {tab==="planning"&&(
+     <div>
+      {aiStatus&&(
+       <div style={{background:C.accD,border:"1px solid "+C.olive,borderRadius:8,
+        padding:"10px 16px",marginBottom:10,display:"flex",gap:10,alignItems:"center"}}>
+        <div style={{width:16,height:16,border:"2px solid "+C.olive,borderRadius:"50%",
+         borderTopColor:"transparent",animation:"spin 0.8s linear infinite"}}></div>
+        <span style={{fontSize:12,color:C.olive,fontWeight:600}}>{aiStatus}</span>
+       </div>
+      )}
+      <WeekCalendar groups={state.groups} selectedGroup={viewGroup} selectedWeek={cw}
+       onSelectWeek={wn=>setCw(wn)} schedules={state.schedules} planFormation={state.planFormation}
+       lockedWeeks={state.lockedWeeks||{}}/>
+      <WeekGrid state={state} setState={setState} cw={cw} viewGroup={viewGroup} setViewGroup={setViewGroup}
+       onGenerate={()=>doGenerate(cw,viewGroup)}/>
+      <div style={{display:"flex",gap:8,marginTop:10,flexWrap:"wrap",alignItems:"center"}}>
+       {state.schedules&&state.schedules[cw]&&!(state.lockedWeeks&&state.lockedWeeks[cw])&&(
+        <span style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+         <Btn v="ghost" sm onClick={()=>clearWeek(cw,viewGroup)}>Vider S{cw} ({(state.groups.find(g=>g.id===viewGroup)||{}).name||viewGroup})</Btn>
+         <Btn v="ghost" sm onClick={()=>clearWeek(cw,null)}>Vider toute S{cw}</Btn>
+         <Btn v="outline" sm onClick={()=>lockWeek(cw)}>Valider et verrouiller S{cw}</Btn>
+        </span>
+       )}
+       {state.lockedWeeks&&state.lockedWeeks[cw]&&(
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+         <span style={{fontSize:12,fontWeight:700,color:C.olive}}>S{cw} validee et verrouillee</span>
+         <Btn v="ghost" sm onClick={()=>unlockWeek(cw)}>Deverrouiller</Btn>
+        </div>
+       )}
+      </div>
+      {schResult&&schResult.conflicts&&schResult.conflicts.length>0&&(
+       <div style={{marginTop:10,background:"#fff0f0",border:"1px solid "+C.red,borderRadius:8,padding:"8px 12px"}}>
+        <div style={{fontWeight:700,color:C.red,fontSize:12,marginBottom:4}}>
+         {schResult.conflicts.length} conflit(s) de placement
+        </div>
+        {schResult.conflicts.slice(0,8).map((c,i)=>(
+         <div key={i} style={{fontSize:11,color:C.dim}}>{c.group} — {c.subject}: {c.placed}h/{c.needed}h</div>
+        ))}
+       </div>
+      )}
+     </div>
+    )}
+    {tab==="recap"&&<RecapPanel state={state} setState={setState}/>}
+    {tab==="matrix"&&<MatrixEditor state={state} setState={setState}/>}
+    {tab==="import"&&(
+     <div style={{maxWidth:500}}>
+      <ST>Import / Export</ST>
+      <Card style={{marginBottom:12}}>
+       <div style={{fontWeight:700,color:C.txt,fontSize:13,marginBottom:8}}>Charger un fichier JSON</div>
+       <div style={{fontSize:12,color:C.mut,marginBottom:12}}>Charge un planning existant (formateurs, groupes, matrice, horaires).</div>
+       <Btn onClick={loadJSON}>Charger JSON</Btn>
+      </Card>
+      <Card>
+       <div style={{fontWeight:700,color:C.txt,fontSize:13,marginBottom:8}}>Exporter</div>
+       <div style={{fontSize:12,color:C.mut,marginBottom:12}}>Sauvegarde l etat complet en JSON.</div>
+       <Btn v="outline" onClick={saveJSON}>Telecharger JSON</Btn>
+      </Card>
+     </div>
+    )}
+   </div>
+  </div>
+ );
+}
+
+// ── TEACHER SPACE ─────────────────────────────────────────────────────────────
+function TeacherSpace({teacher,state,setState,onLogout}){
+ const [cw,setCw]=useState(state.currentWeek||getCurrentWeek());
+ const myMatrix=state.matrix.filter(m=>m.teacherId===teacher.id&&!m.isMGReceiver);
+ const myGroups=[...new Set(myMatrix.map(m=>m.groupId))].map(gid=>state.groups.find(g=>g.id===gid)).filter(Boolean);
+
+ return(
+  <div style={{minHeight:"100vh",background:C.bg,fontFamily:F}}>
+   <div style={{background:C.surf,borderBottom:"1px solid "+C.bord,padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}>
+    <div style={{fontFamily:FS,fontWeight:700,color:C.brun,fontSize:14}}>Planning MFR — {teacher.name}</div>
+    <div style={{flex:1}}></div>
+    <Btn v="ghost" sm onClick={onLogout}>Deconnexion</Btn>
+   </div>
+   <div style={{padding:16,maxWidth:900,margin:"0 auto"}}>
+    <ST sub={"Mes cours — "+myGroups.map(g=>g.name).join(", ")}>Mon plan de formation</ST>
+    <PlanFormationPanel state={state} setState={setState} currentTeacher={teacher}
+     cw={cw} setCw={setCw} onGenerateWeek={null}/>
+   </div>
+  </div>
+ );
+}
+
+// ── APP ───────────────────────────────────────────────────────────────────────
+function App(){
+ const [state,setState]=useState(()=>loadFromLS());
+ const [session,setSession]=useState(null);
+ const [saveStatus,setSaveStatus]=useState("saved");
+
+ useEffect(()=>{
+  setSaveStatus("saving");
+  const t=setTimeout(()=>{
+   try{localStorage.setItem(LS_KEY,JSON.stringify(state));setSaveStatus("saved");}
+   catch(e){setSaveStatus("error");}
+  },800);
+  return()=>clearTimeout(t);
+ },[state]);
+
+ if(!session)return <LoginScreen state={state} onAdmin={()=>setSession({role:"admin"})} onTeacher={t=>setSession({role:"teacher",teacher:t})}/>;
+ if(session.role==="admin")return <DirectorSpace state={state} setState={setState} saveStatus={saveStatus} onLogout={()=>setSession(null)}/>;
+ if(session.role==="teacher")return <TeacherSpace teacher={session.teacher} state={state} setState={setState} onLogout={()=>setSession(null)}/>;
+ return null;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
