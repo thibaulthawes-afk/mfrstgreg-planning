@@ -3444,6 +3444,10 @@ function RecapPanel({state,setState,filterTeacher}){
  );
 }
 
+function PDay({style,children,...props}){
+ return <td style={style} {...props}>{children}</td>;
+}
+
 function EquipePanel({state,setState}){
  var isMobile=useIsMobile();
  const [editId,setEditId]=useState(null);
@@ -3688,17 +3692,17 @@ function EquipePanel({state,setState}){
          var totalPrev=Object.values(prevH).reduce(function(s,h){return s+h;},0);
          return(
           <tr key={t.id} style={{background:ti%2===0?"#fff":C.creme}}>
-           <presDay style={{padding:"5px 10px",fontWeight:600,color:C.txt,position:"sticky",left:0,
+           <PDay style={{padding:"5px 10px",fontWeight:600,color:C.txt,position:"sticky",left:0,
             background:ti%2===0?"#fff":C.creme,borderRight:"1px solid "+C.bord}}>
             {t.name}
-           </presDay>
-           <presDay style={{padding:"4px",textAlign:"center",borderRight:"1px solid "+C.bord,
-            color:C.olive,fontWeight:700}}>{cap}h</presDay>
-           <presDay style={{padding:"4px",textAlign:"center",borderRight:"1px solid "+C.bord,
+           </PDay>
+           <PDay style={{padding:"4px",textAlign:"center",borderRight:"1px solid "+C.bord,
+            color:C.olive,fontWeight:700}}>{cap}h</PDay>
+           <PDay style={{padding:"4px",textAlign:"center",borderRight:"1px solid "+C.bord,
             color:C.dim,fontSize:9}}>
             <div style={{fontWeight:600,color:C.brun}}>{annH}h</div>
             <div style={{color:C.mut}}>mat.</div>
-           </presDay>
+           </PDay>
            {allWeeks.map(function(wn){
             var h=prevH[wn]||0;
             var hR=realH[wn]||0;
@@ -3713,7 +3717,7 @@ function EquipePanel({state,setState}){
             var consec=(prevH[prevW1]||realH[prevW1]||0)>cap&&(prevH[prevW2]||realH[prevW2]||0)>cap;
             if(consec&&display>cap) bg="#fecaca"; // rouge clair si 3e semaine consecutive
             return(
-             <presDay key={wn} style={{padding:"3px 2px",textAlign:"center",
+             <PDay key={wn} style={{padding:"3px 2px",textAlign:"center",
               borderRight:"1px solid "+C.bord,background:bg,cursor:"default"}}>
               {display>0&&(
                <span style={{color,fontWeight:display>cap?700:400,fontSize:10}}>
@@ -3721,7 +3725,7 @@ function EquipePanel({state,setState}){
                 {isReal&&<span style={{fontSize:7,display:"block",color:C.mut}}>reel</span>}
                </span>
               )}
-             </presDay>
+             </PDay>
             );
            })}
           </tr>
@@ -5598,12 +5602,12 @@ function IndispoPanel({teacher,state,setState,cw,setCw,myIndispo,toggleIndispo})
        if(!hasAny) return null;
        return(
         <tr key={si} style={{background:si%2===0?"#fff":C.creme}}>
-         <presDay style={{padding:"4px 6px",color:C.mut,fontSize:9,fontWeight:600,borderRight:"1px solid "+C.bord}}>
+         <PDay style={{padding:"4px 6px",color:C.mut,fontSize:9,fontWeight:600,borderRight:"1px solid "+C.bord}}>
           {SLOTS_BY_DAY[0][si]&&SLOTS_BY_DAY[0][si].label}
-         </presDay>
+         </PDay>
          {DAYS.map(function(_,di){
           var slotsDi=SLOTS_BY_DAY[di];
-          if(!slotsDi||si>=slotsDi.length) return <presDay key={di} style={{padding:3,background:"#f5f3f0",borderRight:"1px solid "+C.bord}}></presDay>;
+          if(!slotsDi||si>=slotsDi.length) return <PDay key={di} style={{padding:3,background:"#f5f3f0",borderRight:"1px solid "+C.bord}}></PDay>;
           );
           var slDi=slotsDi[si];
           var presDay=(myPres[di])||"full";
@@ -5626,14 +5630,14 @@ function IndispoPanel({teacher,state,setState,cw,setCw,myIndispo,toggleIndispo})
           var bg=isAbsent?"#f0f0f0":locked?"#fef9c3":ind?"#fee2e2":courseCell?"#e8f5e9":"#fff";
           var cursor=isAbsent?"default":"pointer";
           return(
-           <presDay key={di} onClick={handleClick}
+           <PDay key={di} onClick={handleClick}
             style={{padding:3,borderRight:"1px solid "+C.bord,textAlign:"center",
             background:bg,cursor,transition:"background .1s",verticalAlign:"top",minWidth:90}}>
             {isAbsent&&<div style={{color:C.bord,fontSize:8}}>absent</div>}
             {locked&&<div style={{color:"#854d0e",fontSize:8,fontWeight:700}}>{"[verrou] "+locked.subject.slice(0,10)}</div>}
             {!isAbsent&&!locked&&ind&&<div style={{color:C.red,fontSize:8,fontWeight:700}}>{ind.motif||"Indispo"}</div>}
             {!isAbsent&&!locked&&!ind&&courseCell&&<div style={{color:C.olive,fontSize:8}}>{courseCell.subject.slice(0,12)}<br/>{courseCell.groupName}</div>}
-           </presDay>
+           </PDay>
           );
          })}
         </tr>
@@ -5750,18 +5754,18 @@ function TeacherHoursPanel({teacher,state,C,F,FS}){
        if(blocked&&display<=cap){bg="#fef9c3";statusText="Cap normal applique (2 sem. consec.)";}
        return(
         <tr key={wn} style={{background:bg,borderBottom:"1px solid "+C.bord}}>
-         <presDay style={{padding:"5px 10px",fontWeight:600}}>Semaine {wn}</presDay>
-         <presDay style={{padding:"4px",textAlign:"center",color:h>0?C.brun:C.mut}}>
+         <PDay style={{padding:"5px 10px",fontWeight:600}}>Semaine {wn}</PDay>
+         <PDay style={{padding:"4px",textAlign:"center",color:h>0?C.brun:C.mut}}>
           {h>0?h+"h":"-"}
-         </presDay>
-         <presDay style={{padding:"4px",textAlign:"center",color:hR>0?C.olive:C.mut,fontWeight:hR>0?700:400}}>
+         </PDay>
+         <PDay style={{padding:"4px",textAlign:"center",color:hR>0?C.olive:C.mut,fontWeight:hR>0?700:400}}>
           {hR>0?hR+"h":"-"}
-         </presDay>
-         <presDay style={{padding:"4px",textAlign:"center",color:C.dim}}>{cap}h</presDay>
-         <presDay style={{padding:"4px 10px",fontSize:10,color:statusColor,fontWeight:warn||over?700:400}}>
+         </PDay>
+         <PDay style={{padding:"4px",textAlign:"center",color:C.dim}}>{cap}h</PDay>
+         <PDay style={{padding:"4px 10px",fontSize:10,color:statusColor,fontWeight:warn||over?700:400}}>
           {statusText}
           {consec&&<span style={{marginLeft:4,fontSize:9,background:C.red,color:"#fff",borderRadius:4,padding:"1px 4px"}}>!</span>}
-         </presDay>
+         </PDay>
         </tr>
        );
       })}
